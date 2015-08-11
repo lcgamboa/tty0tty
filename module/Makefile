@@ -19,7 +19,6 @@ obj-m	:= tty0tty.o
 
 else
 
-#KERNELDIR = /usr/src/linux-2.6.18/
 KERNELDIR ?= /lib/modules/$(shell uname -r)/build
 PWD       := $(shell pwd)
 

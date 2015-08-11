@@ -265,7 +265,7 @@ exit:
 
 #define RELEVANT_IFLAG(iflag) ((iflag) & (IGNBRK|BRKINT|IGNPAR|PARMRK|INPCK))
 
-static void tty0tty_set_termios(struct tty_struct *tty, struct termios *old_termios)
+static void tty0tty_set_termios(struct tty_struct *tty, struct ktermios *old_termios)
 {
 	unsigned int cflag;
 	
@@ -638,8 +638,8 @@ static int __init tty0tty_init(void)
         tty0tty_tty_driver->init_termios.c_oflag = 0;
         tty0tty_tty_driver->init_termios.c_cflag = B38400 | CS8 | CREAD;
         tty0tty_tty_driver->init_termios.c_lflag = 0;
-        //tty0tty_tty_driver->init_termios.c_ispeed = 38400;
-        //tty0tty_tty_driver->init_termios.c_ospeed = 38400;
+        tty0tty_tty_driver->init_termios.c_ispeed = 38400;
+        tty0tty_tty_driver->init_termios.c_ospeed = 38400;
 
 
 	tty_set_operations(tty0tty_tty_driver, &serial_ops);
