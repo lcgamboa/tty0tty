@@ -1,10 +1,10 @@
 /* ########################################################################
 
-   tty0tty - linux null modem emulator (module) 
+   tty0tty - linux null modem emulator (module)  for kernel > 3.0
 
    ########################################################################
 
-   Copyright (c) : 2010  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2012  Luis Claudio Gambôa Lopes
  
     Based in Tiny TTY driver -  Copyright (C) 2002-2004 Greg Kroah-Hartman (greg@kroah.com)
 
@@ -26,6 +26,7 @@
    ######################################################################## */
 
 
+
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/init.h>
@@ -40,7 +41,7 @@
 #include <asm/uaccess.h>
 
 
-#define DRIVER_VERSION "v1.0"
+#define DRIVER_VERSION "v1.1"
 #define DRIVER_AUTHOR "Luis Claudio Gamboa Lopes <lcgamboa@yahoo.com>"
 #define DRIVER_DESC "tty0tty null modem driver"
 
@@ -104,12 +105,13 @@ static int tty0tty_open(struct tty_struct *tty, struct file *file)
 		if (!tty0tty)
 			return -ENOMEM;
 
-		init_MUTEX(&tty0tty->sem);
+		sema_init(&tty0tty->sem,1);
 		tty0tty->open_count = 0;
 
 		tty0tty_table[index] = tty0tty;
-                 
+                
                 init_waitqueue_head(&tty0tty->wait); 
+        
               }
 
          if( (index % 2) == 0)
@@ -353,14 +355,19 @@ static void tty0tty_set_termios(struct tty_struct *tty, struct ktermios *old_ter
 }
 
 
-static int tty0tty_tiocmget(struct tty_struct *tty, struct file *file)
+//static int tty0tty_tiocmget(struct tty_struct *tty, struct file *file)
+static int tty0tty_tiocmget(struct tty_struct *tty)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
 
 	unsigned int result = 0;
 	unsigned int msr = tty0tty->msr;
 	unsigned int mcr = tty0tty->mcr;
-	
+/*
+#ifdef SCULL_DEBUG
+        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+#endif
+*/	
 
 	result = ((mcr & MCR_DTR)  ? TIOCM_DTR  : 0) |	/* DTR is set */
              ((mcr & MCR_RTS)  ? TIOCM_RTS  : 0) |	/* RTS is set */
@@ -373,7 +380,12 @@ static int tty0tty_tiocmget(struct tty_struct *tty, struct file *file)
 	return result;
 }
 
-static int tty0tty_tiocmset(struct tty_struct *tty, struct file *file,
+
+
+
+
+//static int tty0tty_tiocmset(struct tty_struct *tty, struct file *file,
+static int tty0tty_tiocmset(struct tty_struct *tty, 
                          unsigned int set, unsigned int clear)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
@@ -445,18 +457,7 @@ static int tty0tty_tiocmset(struct tty_struct *tty, struct file *file,
 }
 
 
-/*
-static void tty0tty_flush_buffer(struct tty_struct *tty)
-{
-	struct tty0tty_serial *tty0tty = tty->driver_data;
-#ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
-#endif
-
-}
-*/
-
-static int tty0tty_ioctl_tiocgserial(struct tty_struct *tty, struct file *file,
+static int tty0tty_ioctl_tiocgserial(struct tty_struct *tty, 
                       unsigned int cmd, unsigned long arg)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
@@ -492,13 +493,13 @@ static int tty0tty_ioctl_tiocgserial(struct tty_struct *tty, struct file *file,
 	return -ENOIOCTLCMD;
 }
 
-static int tty0tty_ioctl_tiocmiwait(struct tty_struct *tty, struct file *file,
+static int tty0tty_ioctl_tiocmiwait(struct tty_struct *tty,
                       unsigned int cmd, unsigned long arg)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
 	
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - %4lX\n", __FUNCTION__,arg);
+        printk(KERN_DEBUG "%s -\n", __FUNCTION__);
 #endif
 	if (cmd == TIOCMIWAIT) {
 		DECLARE_WAITQUEUE(wait, current);
@@ -506,24 +507,20 @@ static int tty0tty_ioctl_tiocmiwait(struct tty_struct *tty, struct file *file,
 		struct async_icount cprev;
 
 		cprev = tty0tty->icount;
-
 		while (1) {
-	                add_wait_queue(&tty0tty->wait, &wait);
+			add_wait_queue(&tty0tty->wait, &wait);
 			set_current_state(TASK_INTERRUPTIBLE);
 			schedule();
-	                remove_wait_queue(&tty0tty->wait, &wait);
+			remove_wait_queue(&tty0tty->wait, &wait);
 
 			/* see if a signal woke us up */
 			if (signal_pending(current))
-                        {
 				return -ERESTARTSYS;
-                        }
+
 			cnow = tty0tty->icount;
 			if (cnow.rng == cprev.rng && cnow.dsr == cprev.dsr &&
 			    cnow.dcd == cprev.dcd && cnow.cts == cprev.cts)
-                            { 
 				return -EIO; /* no change => error */
-                            }
 			if (((arg & TIOCM_RNG) && (cnow.rng != cprev.rng)) ||
 			    ((arg & TIOCM_DSR) && (cnow.dsr != cprev.dsr)) ||
 			    ((arg & TIOCM_CD)  && (cnow.dcd != cprev.dcd)) ||
@@ -537,7 +534,7 @@ static int tty0tty_ioctl_tiocmiwait(struct tty_struct *tty, struct file *file,
 	return -ENOIOCTLCMD;
 }
 
-static int tty0tty_ioctl_tiocgicount(struct tty_struct *tty, struct file *file,
+static int tty0tty_ioctl_tiocgicount(struct tty_struct *tty,
                       unsigned int cmd, unsigned long arg)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
@@ -568,7 +565,7 @@ static int tty0tty_ioctl_tiocgicount(struct tty_struct *tty, struct file *file,
 	return -ENOIOCTLCMD;
 }
 
-static int tty0tty_ioctl(struct tty_struct *tty, struct file *file,
+static int tty0tty_ioctl(struct tty_struct *tty,
                       unsigned int cmd, unsigned long arg)
 {
 #ifdef SCULL_DEBUG
@@ -576,22 +573,16 @@ static int tty0tty_ioctl(struct tty_struct *tty, struct file *file,
 #endif
 	switch (cmd) {
 	case TIOCGSERIAL:
-		return tty0tty_ioctl_tiocgserial(tty, file, cmd, arg);
+		return tty0tty_ioctl_tiocgserial(tty, cmd, arg);
 	case TIOCMIWAIT:
-		return tty0tty_ioctl_tiocmiwait(tty, file, cmd, arg);
+		return tty0tty_ioctl_tiocmiwait(tty, cmd, arg);
 	case TIOCGICOUNT:
-		return tty0tty_ioctl_tiocgicount(tty, file, cmd, arg);
+		return tty0tty_ioctl_tiocgicount(tty, cmd, arg);
  
         case TCGETS:          
-           return  tty0tty_tiocmget(tty,file);
+           return  tty0tty_tiocmget(tty);
         case TCSETS:          
-           return tty0tty_tiocmset(tty,file, cmd, arg);
-
-
-	case TCFLSH:
-	  return 0;
-	
-
+           return tty0tty_tiocmset(tty, cmd, arg);
 	}
 
 	return -ENOIOCTLCMD;
@@ -606,7 +597,6 @@ static struct tty_operations serial_ops = {
 	.tiocmget = tty0tty_tiocmget,
 	.tiocmset = tty0tty_tiocmset,
 	.ioctl = tty0tty_ioctl,
-//        .flush_buffer = tty0tty_flush_buffer,
 };
 
 static struct tty_driver *tty0tty_tty_driver;
@@ -645,7 +635,6 @@ static int __init tty0tty_init(void)
 	tty_set_operations(tty0tty_tty_driver, &serial_ops);
 
 
-         
 	/* register the tty driver */
 	retval = tty_register_driver(tty0tty_tty_driver);
 	if (retval) {
