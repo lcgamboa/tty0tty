@@ -1,10 +1,10 @@
 /* ########################################################################
 
-   tty0tty - linux null modem emulator (module)  for kernel > 3.0
+   tty0tty - linux null modem emulator (module)  for kernel > 3.8
 
    ########################################################################
 
-   Copyright (c) : 2012  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2013  Luis Claudio Gambôa Lopes
  
     Based in Tiny TTY driver -  Copyright (C) 2002-2004 Greg Kroah-Hartman (greg@kroah.com)
 
@@ -41,7 +41,7 @@
 #include <asm/uaccess.h>
 
 
-#define DRIVER_VERSION "v1.1"
+#define DRIVER_VERSION "v1.2"
 #define DRIVER_AUTHOR "Luis Claudio Gamboa Lopes <lcgamboa@yahoo.com>"
 #define DRIVER_DESC "tty0tty null modem driver"
 
@@ -51,8 +51,8 @@ MODULE_DESCRIPTION( DRIVER_DESC );
 MODULE_LICENSE("GPL");
 
 
-#define TINY_TTY_MAJOR		240	/* experimental range */
-#define TINY_TTY_MINORS		8	/* device number, always even*/
+#define TTY0TTY_MAJOR		240	/* experimental range */
+#define TTY0TTY_MINORS		8	/* device number, always even*/
 
 /* fake UART values */
 //out
@@ -64,6 +64,9 @@ MODULE_LICENSE("GPL");
 #define MSR_CD		0x20
 #define MSR_DSR		0x40
 #define MSR_RI		0x80
+         
+
+static struct tty_port tport[TTY0TTY_MINORS];
 
 struct tty0tty_serial {
 	struct tty_struct	*tty;		/* pointer to the tty for this device */
@@ -78,9 +81,10 @@ struct tty0tty_serial {
 	struct serial_struct	serial;
 	wait_queue_head_t	wait;
 	struct async_icount	icount;
+       
 };
 
-static struct tty0tty_serial *tty0tty_table[TINY_TTY_MINORS];	/* initially all NULL */
+static struct tty0tty_serial *tty0tty_table[TTY0TTY_MINORS];	/* initially all NULL */
 
 
 static int tty0tty_open(struct tty_struct *tty, struct file *file)
@@ -109,10 +113,11 @@ static int tty0tty_open(struct tty_struct *tty, struct file *file)
 		tty0tty->open_count = 0;
 
 		tty0tty_table[index] = tty0tty;
-                
-                init_waitqueue_head(&tty0tty->wait); 
         
               }
+
+          tport[index].tty=tty;
+          tty->port = &tport[index]; 
 
          if( (index % 2) == 0)
          { 
@@ -142,6 +147,9 @@ static int tty0tty_open(struct tty_struct *tty, struct file *file)
 	
 	tty0tty->msr = msr;
 	tty0tty->mcr = 0;
+          
+
+	/* register the tty driver */
  
 	down(&tty0tty->sem);
 
@@ -232,8 +240,8 @@ static int tty0tty_write(struct tty_struct *tty, const unsigned char *buffer, in
 
         if(ttyx != NULL)
         {
-          tty_insert_flip_string(ttyx, buffer, count);
-          tty_flip_buffer_push(ttyx);
+          tty_insert_flip_string(ttyx->port, buffer, count);
+          tty_flip_buffer_push(ttyx->port);
 	  retval=count;
         } 
 		
@@ -265,6 +273,8 @@ exit:
 	return room;
 }
 
+
+
 #define RELEVANT_IFLAG(iflag) ((iflag) & (IGNBRK|BRKINT|IGNPAR|PARMRK|INPCK))
 
 static void tty0tty_set_termios(struct tty_struct *tty, struct ktermios *old_termios)
@@ -274,12 +284,13 @@ static void tty0tty_set_termios(struct tty_struct *tty, struct ktermios *old_ter
 #ifdef SCULL_DEBUG
         printk(KERN_DEBUG "%s - \n", __FUNCTION__);
 #endif
-	cflag = tty->termios->c_cflag;
+
+	cflag = tty->termios.c_cflag;
 
 	/* check that they really want us to change something */
 	if (old_termios) {
 		if ((cflag == old_termios->c_cflag) &&
-		    (RELEVANT_IFLAG(tty->termios->c_iflag) == 
+		    (RELEVANT_IFLAG(tty->termios.c_iflag) == 
 		     RELEVANT_IFLAG(old_termios->c_iflag))) {
 #ifdef SCULL_DEBUG
 			printk(KERN_DEBUG " - nothing to change...\n");
@@ -363,11 +374,7 @@ static int tty0tty_tiocmget(struct tty_struct *tty)
 	unsigned int result = 0;
 	unsigned int msr = tty0tty->msr;
 	unsigned int mcr = tty0tty->mcr;
-/*
-#ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
-#endif
-*/	
+	
 
 	result = ((mcr & MCR_DTR)  ? TIOCM_DTR  : 0) |	/* DTR is set */
              ((mcr & MCR_RTS)  ? TIOCM_RTS  : 0) |	/* RTS is set */
@@ -499,7 +506,7 @@ static int tty0tty_ioctl_tiocmiwait(struct tty_struct *tty,
 	struct tty0tty_serial *tty0tty = tty->driver_data;
 	
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s -\n", __FUNCTION__);
+        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
 #endif
 	if (cmd == TIOCMIWAIT) {
 		DECLARE_WAITQUEUE(wait, current);
@@ -578,11 +585,6 @@ static int tty0tty_ioctl(struct tty_struct *tty,
 		return tty0tty_ioctl_tiocmiwait(tty, cmd, arg);
 	case TIOCGICOUNT:
 		return tty0tty_ioctl_tiocgicount(tty, cmd, arg);
- 
-        case TCGETS:          
-           return  tty0tty_tiocmget(tty);
-        case TCSETS:          
-           return tty0tty_tiocmset(tty, cmd, arg);
 	}
 
 	return -ENOIOCTLCMD;
@@ -599,17 +601,21 @@ static struct tty_operations serial_ops = {
 	.ioctl = tty0tty_ioctl,
 };
 
+
+         
+
 static struct tty_driver *tty0tty_tty_driver;
 
 static int __init tty0tty_init(void)
 {
-
 	int retval;
+        int i;
+ 
 #ifdef SCULL_DEBUG
 	printk(KERN_DEBUG "%s - \n", __FUNCTION__);
 #endif
 	/* allocate the tty driver */
-	tty0tty_tty_driver = alloc_tty_driver(TINY_TTY_MINORS);
+	tty0tty_tty_driver = alloc_tty_driver(TTY0TTY_MINORS);
 	if (!tty0tty_tty_driver)
 		return -ENOMEM;
 
@@ -618,7 +624,7 @@ static int __init tty0tty_init(void)
 	tty0tty_tty_driver->driver_name = "tty0tty";
 	tty0tty_tty_driver->name = "tnt";
         /* no more devfs subsystem */
-	tty0tty_tty_driver->major = TINY_TTY_MAJOR;
+	tty0tty_tty_driver->major = TTY0TTY_MAJOR;
 	tty0tty_tty_driver->type = TTY_DRIVER_TYPE_SERIAL;
 	tty0tty_tty_driver->subtype = SERIAL_TYPE_NORMAL;
         tty0tty_tty_driver->flags = TTY_DRIVER_RESET_TERMIOS | TTY_DRIVER_REAL_RAW ;
@@ -633,10 +639,14 @@ static int __init tty0tty_init(void)
 
 
 	tty_set_operations(tty0tty_tty_driver, &serial_ops);
+        
+        for(i=0;i<TTY0TTY_MINORS;i++)
+        {
+          tty_port_init(&tport[i]);
+          tty_port_link_device(&tport[i],tty0tty_tty_driver, i);
+	}
 
-
-	/* register the tty driver */
-	retval = tty_register_driver(tty0tty_tty_driver);
+        retval = tty_register_driver(tty0tty_tty_driver);
 	if (retval) {
 		printk(KERN_ERR "failed to register tty0tty tty driver");
 		put_tty_driver(tty0tty_tty_driver);
@@ -655,12 +665,15 @@ static void __exit tty0tty_exit(void)
 #ifdef SCULL_DEBUG
         printk(KERN_DEBUG "%s - \n", __FUNCTION__);
 #endif
-	for (i = 0; i < TINY_TTY_MINORS; ++i)
+	for (i = 0; i < TTY0TTY_MINORS; ++i)
+         {
+                tty_port_destroy(&tport[i]);  
 		tty_unregister_device(tty0tty_tty_driver, i);
+         }    
 	tty_unregister_driver(tty0tty_tty_driver);
 
 	/* shut down all of the timers and free the memory */
-	for (i = 0; i < TINY_TTY_MINORS; ++i) {
+	for (i = 0; i < TTY0TTY_MINORS; ++i) {
 		tty0tty = tty0tty_table[i];
 		if (tty0tty) {
 			/* close the port */

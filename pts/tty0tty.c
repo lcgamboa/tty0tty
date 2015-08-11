@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2012  Luis Claudio Gambôa Lopes and Maximiliano Pin max.pin@bitroit.com
+   Copyright (c) : 2013  Luis Claudio Gambôa Lopes and Maximiliano Pin max.pin@bitroit.com
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -75,7 +75,7 @@ int
 conf_ser(int serialDev)
 {
 
-int rc=0;
+int rc;
 struct termios params;
 
 // Get terminal atributes

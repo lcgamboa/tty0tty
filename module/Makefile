@@ -1,5 +1,5 @@
 # Comment/uncomment the following line to disable/enable debugging
-DEBUG = y
+DEBUG = n
 
 
 # Add your debugging flag (or not) to CFLAGS
@@ -14,7 +14,6 @@ EXTRA_CFLAGS += $(DEBFLAGS) -I..
 ifneq ($(KERNELRELEASE),)
 # call from kernel build system
 
-#obj-m	:= tiny_tty.o tiny_serial.o tty0tty.o 
 obj-m	:= tty0tty.o 
 
 else
@@ -30,9 +29,8 @@ endif
 
 
 clean:
-	rm -rf .tmp_versions *.o *~ core .depend .*.cmd *.ko *.mod.c .tmp_versions modules.order Module.symvers
-
-depend .depend dep:
+	rm -rf *.o *~ core .depend .*.cmd *.ko *.mod.c .tmp_versions modules.order Module.symvers
+	depend .depend dep:
 	$(CC) $(CFLAGS) -M *.c > .depend
 
 

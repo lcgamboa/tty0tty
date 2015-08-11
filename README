@@ -1,6 +1,6 @@
 
 
-tty0tty - linux null modem emulator v1.1 
+tty0tty - linux null modem emulator v1.2 
 
 
 This is the tty0tty directory tree:
@@ -24,7 +24,7 @@ pts (unix98):
 
 module:
 
- The module is tested in kernel 3.2.13 (debian) 
+ The module is tested in kernel 3.10.2 (debian) 
 
   When loaded, create 8 ttys interconnected:
   /dev/tnt0  <=>  /dev/tnt1 
