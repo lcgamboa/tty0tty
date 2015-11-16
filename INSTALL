@@ -6,11 +6,10 @@ pts:
 
 
 module:
-   make        	      -To compile 
-   insmod tty0tty.ko  -To load module (using root or sudo)	
+   make        	       -To compile 
+   sudo make install   -To install
+   sudo make uninstall -To uninstall
 
-
-this version is not auto installable
 
 
 Requirements:

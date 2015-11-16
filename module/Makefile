@@ -1,6 +1,10 @@
 # Comment/uncomment the following line to disable/enable debugging
 DEBUG = n
 
+MKDIR= mkdir -p
+CP= cp
+RM= rm -f
+MODULEDIR= /lib/modules/`uname -r`/misc/
 
 # Add your debugging flag (or not) to CFLAGS
 ifeq ($(DEBUG),y)
@@ -26,6 +30,23 @@ default:
 
 endif
 
+
+install: default
+	${CP} 99-tty0tty.rules  /etc/udev/rules.d/
+	service udev reload
+	chow root:root /etc/udev/rules.d/99-tty0tty.rules
+	${MKDIR} ${MODULEDIR}
+	${CP} -v tty0tty.ko ${MODULEDIR}
+	depmod
+	modprobe tty0tty
+	echo "tty0tty" >> /etc/modules-load.d/tty0tty.conf
+
+
+
+uninstall:
+	$(RM) ${MODULEDIR}tty0tty.ko
+	$(RM) /etc/modules-load.d/tty0tty.conf
+	$(RM) /etc/udev/rules.d/99-tty0tty.rules
 
 
 clean:

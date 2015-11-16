@@ -1,0 +1,8 @@
+  SUBSYSTEM=="tty", KERNEL=="tnt0", GROUP="dialout", MODE="0660"
+  SUBSYSTEM=="tty", KERNEL=="tnt1", GROUP="dialout", MODE="0660"
+  SUBSYSTEM=="tty", KERNEL=="tnt2", GROUP="dialout", MODE="0660"
+  SUBSYSTEM=="tty", KERNEL=="tnt3", GROUP="dialout", MODE="0660"
+  SUBSYSTEM=="tty", KERNEL=="tnt4", GROUP="dialout", MODE="0660"
+  SUBSYSTEM=="tty", KERNEL=="tnt5", GROUP="dialout", MODE="0660"
+  SUBSYSTEM=="tty", KERNEL=="tnt6", GROUP="dialout", MODE="0660"
+  SUBSYSTEM=="tty", KERNEL=="tnt7", GROUP="dialout", MODE="0660"
