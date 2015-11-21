@@ -34,12 +34,12 @@ endif
 install: default
 	${CP} 99-tty0tty.rules  /etc/udev/rules.d/
 	service udev reload
-	chow root:root /etc/udev/rules.d/99-tty0tty.rules
+	chown root:root /etc/udev/rules.d/99-tty0tty.rules
 	${MKDIR} ${MODULEDIR}
 	${CP} -v tty0tty.ko ${MODULEDIR}
 	depmod
 	modprobe tty0tty
-	echo "tty0tty" >> /etc/modules-load.d/tty0tty.conf
+	echo "tty0tty" > /etc/modules-load.d/tty0tty.conf
 
 
 
