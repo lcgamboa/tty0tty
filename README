@@ -49,10 +49,7 @@ Requirements:
   for module build is necessary kernel-headers or kernel source
 
 
-To set the devices permissions automatically:
-
-  create the file /etc/udev/rules.d/99-tty0tty.rules
-  put the rules below inside the file tho set the permissions:
+make install set the devices permissions automatically in udev creating the file /etc/udev/rules.d/99-tty0tty.rules with rules:
 
   SUBSYSTEM=="tty", KERNEL=="tnt0", GROUP="dialout", MODE="0660"
   SUBSYSTEM=="tty", KERNEL=="tnt1", GROUP="dialout", MODE="0660"
@@ -62,6 +59,14 @@ To set the devices permissions automatically:
   SUBSYSTEM=="tty", KERNEL=="tnt5", GROUP="dialout", MODE="0660"
   SUBSYSTEM=="tty", KERNEL=="tnt6", GROUP="dialout", MODE="0660"
   SUBSYSTEM=="tty", KERNEL=="tnt7", GROUP="dialout", MODE="0660"
+
+
+The user must be in the dialout group to access the ports. 
+To add your user to dialout group use the command:
+ 
+sudo usermod -a -G dialout your_user_name
+
+after this is necessary logout and login to group permissions take effect.
 
 
 For e-mail suggestions :  lcgamboa@yahoo.com
