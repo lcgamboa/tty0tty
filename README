@@ -60,6 +60,11 @@ make install set the devices permissions automatically in udev creating the file
   SUBSYSTEM=="tty", KERNEL=="tnt6", GROUP="dialout", MODE="0660"
   SUBSYSTEM=="tty", KERNEL=="tnt7", GROUP="dialout", MODE="0660"
 
+It's possible edit rules and create permanet symbolic names with the parameter SYMLINK:
+
+  SUBSYSTEM=="tty", KERNEL=="tnt0", GROUP="dialout", MODE="0660", SYMLINK+="ttyUSB10"
+  SUBSYSTEM=="tty", KERNEL=="tnt1", GROUP="dialout", MODE="0660", SYMLINK+="ttyUSB11"
+
 
 The user must be in the dialout group to access the ports. 
 To add your user to dialout group use the command:
