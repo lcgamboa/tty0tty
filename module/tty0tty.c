@@ -4,9 +4,9 @@
 
    ########################################################################
 
-   Copyright (c) : 2013  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2013-2019  Luis Claudio Gambôa Lopes
  
-    Based in Tiny TTY driver -  Copyright (C) 2002-2004 Greg Kroah-Hartman (greg@kroah.com)
+   Based in Tiny TTY driver -  Copyright (C) 2002-2004 Greg Kroah-Hartman (greg@kroah.com)
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@
 #endif
 
 
-#define DRIVER_VERSION "v1.2"
+#define DRIVER_VERSION "v1.3"
 #define DRIVER_AUTHOR "Luis Claudio Gamboa Lopes <lcgamboa@yahoo.com>"
 #define DRIVER_DESC "tty0tty null modem driver"
 
@@ -219,6 +219,13 @@ static int tty0tty_write(struct tty_struct *tty, const unsigned char *buffer, in
 	int retval = -EINVAL;
 	struct tty_struct  *ttyx = NULL;	
 
+#ifdef SCULL_DEBUG
+	int i;
+	printk(KERN_DEBUG "%s - [%02i] \n", __FUNCTION__,count);
+	for(i=0;i<count;i++)
+	  printk(KERN_DEBUG " 0x%02X \n",buffer[i]);
+#endif	
+
         if (!tty0tty)
 		return -ENODEV;
 
@@ -259,6 +266,10 @@ static int tty0tty_write_room(struct tty_struct *tty)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
 	int room = -EINVAL;
+
+#ifdef SCULL_DEBUG
+	printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+#endif	
 	
 	if (!tty0tty)
 		return -ENODEV;
@@ -371,7 +382,6 @@ static void tty0tty_set_termios(struct tty_struct *tty, struct ktermios *old_ter
 }
 
 
-//static int tty0tty_tiocmget(struct tty_struct *tty, struct file *file)
 static int tty0tty_tiocmget(struct tty_struct *tty)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
@@ -389,6 +399,10 @@ static int tty0tty_tiocmget(struct tty_struct *tty)
              ((msr & MSR_RI)   ? TIOCM_RI   : 0) |	/* Ring Indicator is set */
              ((msr & MSR_DSR)  ? TIOCM_DSR  : 0);	/* DSR is set */
 
+#ifdef SCULL_DEBUG
+        printk(KERN_DEBUG "%s - 0x%04X \n", __FUNCTION__, result);
+#endif
+
 	return result;
 }
 
@@ -396,7 +410,6 @@ static int tty0tty_tiocmget(struct tty_struct *tty)
 
 
 
-//static int tty0tty_tiocmset(struct tty_struct *tty, struct file *file,
 static int tty0tty_tiocmset(struct tty_struct *tty, 
                          unsigned int set, unsigned int clear)
 {
@@ -405,7 +418,7 @@ static int tty0tty_tiocmset(struct tty_struct *tty,
 	unsigned int msr=0;
         
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+        printk(KERN_DEBUG "%s - set=0x%04X clear=0x%04X \n", __FUNCTION__, set ,clear);
 #endif
 
         if( (tty0tty->tty->index % 2) == 0)
@@ -470,126 +483,253 @@ static int tty0tty_tiocmset(struct tty_struct *tty,
 
 
 static int tty0tty_ioctl_tiocgserial(struct tty_struct *tty, 
-                      unsigned int cmd, unsigned long arg)
+                       unsigned long arg)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
+	struct serial_struct tmp;
 	
 #ifdef SCULL_DEBUG
         printk(KERN_DEBUG "%s - \n", __FUNCTION__);
 #endif
-	if (cmd == TIOCGSERIAL) {
-		struct serial_struct tmp;
 
-		if (!arg)
-			return -EFAULT;
+	if (!arg)
+		return -EFAULT;
 
-		memset(&tmp, 0, sizeof(tmp));
+	memset(&tmp, 0, sizeof(tmp));
 
-		tmp.type		= tty0tty->serial.type;
-		tmp.line		= tty0tty->serial.line;
-		tmp.port		= tty0tty->serial.port;
-		tmp.irq			= tty0tty->serial.irq;
-		tmp.flags		= ASYNC_SKIP_TEST | ASYNC_AUTO_IRQ;
-		tmp.xmit_fifo_size	= tty0tty->serial.xmit_fifo_size;
-		tmp.baud_base		= tty0tty->serial.baud_base;
-		tmp.close_delay		= 5*HZ;
-		tmp.closing_wait	= 30*HZ;
-		tmp.custom_divisor	= tty0tty->serial.custom_divisor;
-		tmp.hub6		= tty0tty->serial.hub6;
-		tmp.io_type		= tty0tty->serial.io_type;
+	tmp.type		= tty0tty->serial.type;
+	tmp.line		= tty0tty->serial.line;
+	tmp.port		= tty0tty->serial.port;
+	tmp.irq			= tty0tty->serial.irq;
+	tmp.flags		= ASYNC_SKIP_TEST | ASYNC_AUTO_IRQ;
+	tmp.xmit_fifo_size	= tty0tty->serial.xmit_fifo_size;
+	tmp.baud_base		= tty0tty->serial.baud_base;
+	tmp.close_delay		= 5*HZ;
+	tmp.closing_wait	= 30*HZ;
+	tmp.custom_divisor	= tty0tty->serial.custom_divisor;
+	tmp.hub6		= tty0tty->serial.hub6;
+	tmp.io_type		= tty0tty->serial.io_type;
 
-		if (copy_to_user((void __user *)arg, &tmp, sizeof(struct serial_struct)))
-			return -EFAULT;
-		return 0;
-	}
-	return -ENOIOCTLCMD;
+	if (copy_to_user((void __user *)arg, &tmp, sizeof(struct serial_struct)))
+		return -EFAULT;
+	return 0;
+}
+
+static int tty0tty_ioctl_tiocsserial(struct tty_struct *tty, 
+                       unsigned long arg)
+{
+/*
+	struct tty0tty_serial *tty0tty = tty->driver_data;
+	struct serial_struct tmp;
+	
+#ifdef SCULL_DEBUG
+        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+#endif
+
+	if (!arg)
+		return -EFAULT;
+
+	memset(&tmp, 0, sizeof(tmp));
+
+	tmp.type		= tty0tty->serial.type;
+	tmp.line		= tty0tty->serial.line;
+	tmp.port		= tty0tty->serial.port;
+	tmp.irq			= tty0tty->serial.irq;
+	tmp.flags		= ASYNC_SKIP_TEST | ASYNC_AUTO_IRQ;
+	tmp.xmit_fifo_size	= tty0tty->serial.xmit_fifo_size;
+	tmp.baud_base		= tty0tty->serial.baud_base;
+	tmp.close_delay		= 5*HZ;
+	tmp.closing_wait	= 30*HZ;
+	tmp.custom_divisor	= tty0tty->serial.custom_divisor;
+	tmp.hub6		= tty0tty->serial.hub6;
+	tmp.io_type		= tty0tty->serial.io_type;
+
+	if (copy_to_user((void __user *)arg, &tmp, sizeof(struct serial_struct)))
+		return -EFAULT;
+	return 0;
+*/	
+	return -EFAULT;//TODO
 }
 
 static int tty0tty_ioctl_tiocmiwait(struct tty_struct *tty,
-                      unsigned int cmd, unsigned long arg)
+                      unsigned long arg)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
-	
+	DECLARE_WAITQUEUE(wait, current);
+	struct async_icount cnow;
+	struct async_icount cprev;
+
 #ifdef SCULL_DEBUG
         printk(KERN_DEBUG "%s - \n", __FUNCTION__);
 #endif
-	if (cmd == TIOCMIWAIT) {
-		DECLARE_WAITQUEUE(wait, current);
-		struct async_icount cnow;
-		struct async_icount cprev;
+	cprev = tty0tty->icount;
+	while (1) {
+		add_wait_queue(&tty0tty->wait, &wait);
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule();
+		remove_wait_queue(&tty0tty->wait, &wait);
 
-		cprev = tty0tty->icount;
-		while (1) {
-			add_wait_queue(&tty0tty->wait, &wait);
-			set_current_state(TASK_INTERRUPTIBLE);
-			schedule();
-			remove_wait_queue(&tty0tty->wait, &wait);
+		/* see if a signal woke us up */
+		if (signal_pending(current))
+			return -ERESTARTSYS;
 
-			/* see if a signal woke us up */
-			if (signal_pending(current))
-				return -ERESTARTSYS;
-
-			cnow = tty0tty->icount;
-			if (cnow.rng == cprev.rng && cnow.dsr == cprev.dsr &&
-			    cnow.dcd == cprev.dcd && cnow.cts == cprev.cts)
-				return -EIO; /* no change => error */
-			if (((arg & TIOCM_RNG) && (cnow.rng != cprev.rng)) ||
-			    ((arg & TIOCM_DSR) && (cnow.dsr != cprev.dsr)) ||
-			    ((arg & TIOCM_CD)  && (cnow.dcd != cprev.dcd)) ||
-			    ((arg & TIOCM_CTS) && (cnow.cts != cprev.cts)) ) {
-				return 0;
-			}
-			cprev = cnow;
+		cnow = tty0tty->icount;
+		if (cnow.rng == cprev.rng && cnow.dsr == cprev.dsr &&
+		    cnow.dcd == cprev.dcd && cnow.cts == cprev.cts)
+			return -EIO; /* no change => error */
+		if (((arg & TIOCM_RNG) && (cnow.rng != cprev.rng)) ||
+		    ((arg & TIOCM_DSR) && (cnow.dsr != cprev.dsr)) ||
+		    ((arg & TIOCM_CD)  && (cnow.dcd != cprev.dcd)) ||
+		    ((arg & TIOCM_CTS) && (cnow.cts != cprev.cts)) ) {
+			return 0;
 		}
-
+		cprev = cnow;
 	}
-	return -ENOIOCTLCMD;
 }
 
 static int tty0tty_ioctl_tiocgicount(struct tty_struct *tty,
-                      unsigned int cmd, unsigned long arg)
+                      unsigned long arg)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
+	struct async_icount cnow = tty0tty->icount;
+	struct serial_icounter_struct icount;
 	
 #ifdef SCULL_DEBUG
         printk(KERN_DEBUG "%s - \n", __FUNCTION__);
 #endif
-	if (cmd == TIOCGICOUNT) {
-		struct async_icount cnow = tty0tty->icount;
-		struct serial_icounter_struct icount;
 
-		icount.cts	= cnow.cts;
-		icount.dsr	= cnow.dsr;
-		icount.rng	= cnow.rng;
-		icount.dcd	= cnow.dcd;
-		icount.rx	= cnow.rx;
-		icount.tx	= cnow.tx;
-		icount.frame	= cnow.frame;
-		icount.overrun	= cnow.overrun;
-		icount.parity	= cnow.parity;
-		icount.brk	= cnow.brk;
-		icount.buf_overrun = cnow.buf_overrun;
+	icount.cts	= cnow.cts;
+	icount.dsr	= cnow.dsr;
+	icount.rng	= cnow.rng;
+	icount.dcd	= cnow.dcd;
+	icount.rx	= cnow.rx;
+	icount.tx	= cnow.tx;
+	icount.frame	= cnow.frame;
+	icount.overrun	= cnow.overrun;
+	icount.parity	= cnow.parity;
+	icount.brk	= cnow.brk;
+	icount.buf_overrun = cnow.buf_overrun;
 
-		if (copy_to_user((void __user *)arg, &icount, sizeof(icount)))
-			return -EFAULT;
-		return 0;
+	if (copy_to_user((void __user *)arg, &icount, sizeof(icount)))
+		return -EFAULT;
+	return 0;
+}
+
+static int tty0tty_ioctl_tcgets(struct tty_struct *tty,
+                      unsigned long arg)
+{
+	struct ktermios kterm;	
+#ifdef SCULL_DEBUG
+        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+#endif
+	down_read(&tty->termios_rwsem);
+	kterm = tty->termios;
+	up_read(&tty->termios_rwsem);
+	if (kernel_termios_to_user_termios_1((struct termios __user *)arg, &kterm))
+		return  -EFAULT;
+	return 0;
+
+
+}
+
+static int tty0tty_ioctl_tcsets(struct tty_struct *tty,
+                      unsigned long arg)
+{
+	struct ktermios tmp_termios;
+	int retval = tty_check_change(tty);
+
+#ifdef SCULL_DEBUG
+        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+#endif
+
+
+	if (retval)
+		return retval;
+
+	down_read(&tty->termios_rwsem);
+	tmp_termios = tty->termios;
+	up_read(&tty->termios_rwsem);
+
+	if (user_termios_to_kernel_termios_1(&tmp_termios,
+					(struct termios __user *)arg))
+		return -EFAULT;
+
+	tmp_termios.c_ispeed = tty_termios_input_baud_rate(&tmp_termios);
+	tmp_termios.c_ospeed = tty_termios_baud_rate(&tmp_termios);
+
+	tty_set_termios(tty, &tmp_termios);
+
+return 0;
+
+}
+
+static int tty0tty_ioctl_tcflsh(struct tty_struct *tty,
+                      unsigned long arg)
+{
+	struct tty_ldisc *ld = tty->ldisc;
+	int retval = tty_check_change(tty);
+
+#ifdef SCULL_DEBUG
+        printk(KERN_DEBUG "%s - 0x%08lX\n", __FUNCTION__, arg);
+#endif
+
+	if (retval)
+		return retval;
+
+	switch (arg) {
+	case TCIFLUSH:
+		if (ld && ld->ops->flush_buffer) {
+			ld->ops->flush_buffer(tty);
+			tty_unthrottle(tty);
+		}
+		break;
+	case TCIOFLUSH:
+		if (ld && ld->ops->flush_buffer) {
+			ld->ops->flush_buffer(tty);
+			tty_unthrottle(tty);
+		}
+		/* fall through */
+	case TCOFLUSH:
+		tty_driver_flush_buffer(tty);
+		break;
+	default:
+		return -EINVAL;
 	}
-	return -ENOIOCTLCMD;
+	return 0;
 }
 
 static int tty0tty_ioctl(struct tty_struct *tty,
                       unsigned int cmd, unsigned long arg)
 {
 #ifdef SCULL_DEBUG
-	printk(KERN_DEBUG "%s - %04X \n", __FUNCTION__,cmd);
+	printk(KERN_DEBUG "%s \n", __FUNCTION__);
 #endif
 	switch (cmd) {
 	case TIOCGSERIAL:
-		return tty0tty_ioctl_tiocgserial(tty, cmd, arg);
+		return tty0tty_ioctl_tiocgserial(tty, arg);
+	case TIOCSSERIAL:
+		return tty0tty_ioctl_tiocsserial(tty, arg);
 	case TIOCMIWAIT:
-		return tty0tty_ioctl_tiocmiwait(tty, cmd, arg);
+		return tty0tty_ioctl_tiocmiwait(tty, arg);
 	case TIOCGICOUNT:
-		return tty0tty_ioctl_tiocgicount(tty, cmd, arg);
+		return tty0tty_ioctl_tiocgicount(tty, arg);
+	case TCGETS:
+		return tty0tty_ioctl_tcgets(tty, arg);
+	case TCSETS:
+		return tty0tty_ioctl_tcsets(tty, arg);
+	case TCFLSH:
+		return tty0tty_ioctl_tcflsh(tty, arg);
+/*
+	case TIOCMGET:
+		return tty0tty_tiocmget(tty);
+	case TIOCMSET:
+		return tty0tty_tiocmset(tty, arg, ~arg);
+*/
+#ifdef SCULL_DEBUG
+	default:	
+	        printk(KERN_DEBUG "ioctl 0x%04X Not Implemented!\n",cmd);
+		break;
+#endif
 	}
 
 	return -ENOIOCTLCMD;
