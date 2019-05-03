@@ -100,7 +100,7 @@ static int tty0tty_open(struct tty_struct *tty, struct file *file)
 	int mcr=0;
 
 #ifdef SCULL_DEBUG
-	printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+	printk(KERN_DEBUG "%s - tnt%i \n", __FUNCTION__,tty->index);
 #endif	
         /* initialize the pointer in case something fails */
 	tty->driver_data = NULL;
@@ -173,7 +173,7 @@ static void do_close(struct tty0tty_serial *tty0tty)
 	unsigned int msr=0;
 	
 #ifdef SCULL_DEBUG
-	printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+	printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__,tty0tty->tty->index);
 #endif
         if( (tty0tty->tty->index % 2) == 0)
         {  
@@ -207,7 +207,7 @@ static void tty0tty_close(struct tty_struct *tty, struct file *file)
 	struct tty0tty_serial *tty0tty = tty->driver_data;
 	
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+        printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__, tty->index);
 #endif
 	if (tty0tty)
 		do_close(tty0tty);
@@ -221,7 +221,7 @@ static int tty0tty_write(struct tty_struct *tty, const unsigned char *buffer, in
 
 #ifdef SCULL_DEBUG
 	int i;
-	printk(KERN_DEBUG "%s - [%02i] \n", __FUNCTION__,count);
+	printk(KERN_DEBUG "%s -tnt%i  [%02i] \n", __FUNCTION__,tty->index, count);
 	for(i=0;i<count;i++)
 	  printk(KERN_DEBUG " 0x%02X \n",buffer[i]);
 #endif	
@@ -268,7 +268,7 @@ static int tty0tty_write_room(struct tty_struct *tty)
 	int room = -EINVAL;
 
 #ifdef SCULL_DEBUG
-	printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+	printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__,tty->index);
 #endif	
 	
 	if (!tty0tty)
@@ -298,7 +298,7 @@ static void tty0tty_set_termios(struct tty_struct *tty, struct ktermios *old_ter
 	unsigned int cflag;
 	
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+        printk(KERN_DEBUG "%s -tnt%i \n", __FUNCTION__, tty->index);
 #endif
 
 	cflag = tty->termios.c_cflag;
@@ -400,7 +400,7 @@ static int tty0tty_tiocmget(struct tty_struct *tty)
              ((msr & MSR_DSR)  ? TIOCM_DSR  : 0);	/* DSR is set */
 
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - 0x%04X \n", __FUNCTION__, result);
+   //     printk(KERN_DEBUG "%s - tnt%i 0x%04X \n", __FUNCTION__, tty->index, result);
 #endif
 
 	return result;
@@ -418,7 +418,7 @@ static int tty0tty_tiocmset(struct tty_struct *tty,
 	unsigned int msr=0;
         
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - set=0x%04X clear=0x%04X \n", __FUNCTION__, set ,clear);
+        printk(KERN_DEBUG "%s - tnt%i set=0x%04X clear=0x%04X \n", __FUNCTION__,tty->index, set ,clear);
 #endif
 
         if( (tty0tty->tty->index % 2) == 0)
@@ -489,7 +489,7 @@ static int tty0tty_ioctl_tiocgserial(struct tty_struct *tty,
 	struct serial_struct tmp;
 	
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+        printk(KERN_DEBUG "%s - tnt%i \n", __FUNCTION__, tty->index);
 #endif
 
 	if (!arg)
@@ -523,7 +523,7 @@ static int tty0tty_ioctl_tiocsserial(struct tty_struct *tty,
 	struct serial_struct tmp;
 	
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+        printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__, tty->index);
 #endif
 
 	if (!arg)
@@ -560,7 +560,7 @@ static int tty0tty_ioctl_tiocmiwait(struct tty_struct *tty,
 	struct async_icount cprev;
 
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+        printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__, tty->index);
 #endif
 	cprev = tty0tty->icount;
 	while (1) {
@@ -595,7 +595,7 @@ static int tty0tty_ioctl_tiocgicount(struct tty_struct *tty,
 	struct serial_icounter_struct icount;
 	
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+        printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__, tty->index);
 #endif
 
 	icount.cts	= cnow.cts;
@@ -616,30 +616,37 @@ static int tty0tty_ioctl_tiocgicount(struct tty_struct *tty,
 }
 
 static int tty0tty_ioctl_tcgets(struct tty_struct *tty,
-                      unsigned long arg)
+                      unsigned long arg, unsigned int opt)
 {
 	struct ktermios kterm;	
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+        printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__, tty->index);
 #endif
 	down_read(&tty->termios_rwsem);
 	kterm = tty->termios;
 	up_read(&tty->termios_rwsem);
-	if (kernel_termios_to_user_termios_1((struct termios __user *)arg, &kterm))
-		return  -EFAULT;
+
+	if(opt){
+        	if (kernel_termios_to_user_termios((struct termios2 __user *)arg, &kterm))
+			return  -EFAULT;
+	}
+	else{	
+		if (kernel_termios_to_user_termios_1((struct termios __user *)arg, &kterm))
+			return  -EFAULT;
+	}
 	return 0;
 
 
 }
 
 static int tty0tty_ioctl_tcsets(struct tty_struct *tty,
-                      unsigned long arg)
+                      unsigned long arg, unsigned int opt)
 {
 	struct ktermios tmp_termios;
 	int retval = tty_check_change(tty);
 
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - \n", __FUNCTION__);
+        printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__, tty->index);
 #endif
 
 
@@ -650,9 +657,16 @@ static int tty0tty_ioctl_tcsets(struct tty_struct *tty,
 	tmp_termios = tty->termios;
 	up_read(&tty->termios_rwsem);
 
-	if (user_termios_to_kernel_termios_1(&tmp_termios,
-					(struct termios __user *)arg))
-		return -EFAULT;
+	if(opt){
+		if (user_termios_to_kernel_termios(&tmp_termios,
+						(struct termios2 __user *)arg))
+			return -EFAULT;
+	}
+	else{
+		if (user_termios_to_kernel_termios_1(&tmp_termios,
+						(struct termios __user *)arg))
+			return -EFAULT;
+	}
 
 	tmp_termios.c_ispeed = tty_termios_input_baud_rate(&tmp_termios);
 	tmp_termios.c_ospeed = tty_termios_baud_rate(&tmp_termios);
@@ -670,7 +684,7 @@ static int tty0tty_ioctl_tcflsh(struct tty_struct *tty,
 	int retval = tty_check_change(tty);
 
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - 0x%08lX\n", __FUNCTION__, arg);
+        printk(KERN_DEBUG "%s - tnt%i 0x%08lX\n", __FUNCTION__,tty->index, arg);
 #endif
 
 	if (retval)
@@ -702,7 +716,7 @@ static int tty0tty_ioctl(struct tty_struct *tty,
                       unsigned int cmd, unsigned long arg)
 {
 #ifdef SCULL_DEBUG
-	printk(KERN_DEBUG "%s \n", __FUNCTION__);
+	printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__, tty->index);
 #endif
 	switch (cmd) {
 	case TIOCGSERIAL:
@@ -714,17 +728,19 @@ static int tty0tty_ioctl(struct tty_struct *tty,
 	case TIOCGICOUNT:
 		return tty0tty_ioctl_tiocgicount(tty, arg);
 	case TCGETS:
-		return tty0tty_ioctl_tcgets(tty, arg);
+		return tty0tty_ioctl_tcgets(tty, arg, 0);
 	case TCSETS:
-		return tty0tty_ioctl_tcsets(tty, arg);
+		return tty0tty_ioctl_tcsets(tty, arg ,0);
 	case TCFLSH:
 		return tty0tty_ioctl_tcflsh(tty, arg);
-/*
-	case TIOCMGET:
-		return tty0tty_tiocmget(tty);
-	case TIOCMSET:
-		return tty0tty_tiocmset(tty, arg, ~arg);
-*/
+	case TCGETS2:
+		return tty0tty_ioctl_tcgets(tty, arg, 1);
+	case TCSETS2:
+		return tty0tty_ioctl_tcsets(tty, arg ,1);
+//	case TIOCMGET:
+//		return tty0tty_tiocmget(tty);
+//	case TIOCMSET:
+//		return tty0tty_tiocmset(tty, arg, ~arg);
 #ifdef SCULL_DEBUG
 	default:	
 	        printk(KERN_DEBUG "ioctl 0x%04X Not Implemented!\n",cmd);
