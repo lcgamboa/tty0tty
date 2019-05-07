@@ -400,7 +400,7 @@ static int tty0tty_tiocmget(struct tty_struct *tty)
              ((msr & MSR_DSR)  ? TIOCM_DSR  : 0);	/* DSR is set */
 
 #ifdef SCULL_DEBUG
-   //     printk(KERN_DEBUG "%s - tnt%i 0x%04X \n", __FUNCTION__, tty->index, result);
+        printk(KERN_DEBUG "%s - tnt%i 0x%04X \n", __FUNCTION__, tty->index, result);
 #endif
 
 	return result;
@@ -716,7 +716,7 @@ static int tty0tty_ioctl(struct tty_struct *tty,
                       unsigned int cmd, unsigned long arg)
 {
 #ifdef SCULL_DEBUG
-	printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__, tty->index);
+	printk(KERN_DEBUG "%s - tnt%i  cmd=0x%04X\n", __FUNCTION__, tty->index, cmd);
 #endif
 	switch (cmd) {
 	case TIOCGSERIAL:
@@ -751,6 +751,17 @@ static int tty0tty_ioctl(struct tty_struct *tty,
 	return -ENOIOCTLCMD;
 }
 
+
+static int tty0tty_break_ctl(struct tty_struct *tty, int state){
+
+#ifdef SCULL_DEBUG
+	printk(KERN_DEBUG "%s - %i \n", __FUNCTION__, state);
+#endif
+
+	return 0;
+}
+
+
 static struct tty_operations serial_ops = {
 	.open = tty0tty_open,
 	.close = tty0tty_close,
@@ -760,6 +771,7 @@ static struct tty_operations serial_ops = {
 	.tiocmget = tty0tty_tiocmget,
 	.tiocmset = tty0tty_tiocmset,
 	.ioctl = tty0tty_ioctl,
+	.break_ctl = tty0tty_break_ctl,
 };
 
 
@@ -788,7 +800,7 @@ static int __init tty0tty_init(void)
 	tty0tty_tty_driver->major = TTY0TTY_MAJOR;
 	tty0tty_tty_driver->type = TTY_DRIVER_TYPE_SERIAL;
 	tty0tty_tty_driver->subtype = SERIAL_TYPE_NORMAL;
-        tty0tty_tty_driver->flags = TTY_DRIVER_RESET_TERMIOS | TTY_DRIVER_REAL_RAW ;
+        tty0tty_tty_driver->flags = /*TTY_DRIVER_RESET_TERMIOS |*/ TTY_DRIVER_REAL_RAW ;
         /* no more devfs subsystem */
 	tty0tty_tty_driver->init_termios = tty_std_termios;
         tty0tty_tty_driver->init_termios.c_iflag = 0;
