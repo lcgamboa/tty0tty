@@ -400,7 +400,7 @@ static int tty0tty_tiocmget(struct tty_struct *tty)
              ((msr & MSR_DSR)  ? TIOCM_DSR  : 0);	/* DSR is set */
 
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - tnt%i 0x%04X \n", __FUNCTION__, tty->index, result);
+        printk(KERN_DEBUG "%s - tnt%i 0x%08X \n", __FUNCTION__, tty->index, result);
 #endif
 
 	return result;
@@ -418,7 +418,7 @@ static int tty0tty_tiocmset(struct tty_struct *tty,
 	unsigned int msr=0;
         
 #ifdef SCULL_DEBUG
-        printk(KERN_DEBUG "%s - tnt%i set=0x%04X clear=0x%04X \n", __FUNCTION__,tty->index, set ,clear);
+        printk(KERN_DEBUG "%s - tnt%i set=0x%08X clear=0x%08X \n", __FUNCTION__,tty->index, set ,clear);
 #endif
 
         if( (tty0tty->tty->index % 2) == 0)
@@ -737,10 +737,6 @@ static int tty0tty_ioctl(struct tty_struct *tty,
 		return tty0tty_ioctl_tcgets(tty, arg, 1);
 	case TCSETS2:
 		return tty0tty_ioctl_tcsets(tty, arg ,1);
-//	case TIOCMGET:
-//		return tty0tty_tiocmget(tty);
-//	case TIOCMSET:
-//		return tty0tty_tiocmset(tty, arg, ~arg);
 #ifdef SCULL_DEBUG
 	default:	
 	        printk(KERN_DEBUG "ioctl 0x%04X Not Implemented!\n",cmd);
