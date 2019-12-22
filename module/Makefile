@@ -31,16 +31,17 @@ default:
 endif
 
 
-install: default
-	${CP} 99-tty0tty.rules  /etc/udev/rules.d/
-	service udev reload
-	chown root:root /etc/udev/rules.d/99-tty0tty.rules
+install: default rules
 	${MKDIR} ${MODULEDIR}
 	${CP} -v tty0tty.ko ${MODULEDIR}
 	depmod
 	modprobe tty0tty
-	echo "tty0tty" > /etc/modules-load.d/tty0tty.conf
 
+rules:
+	echo "tty0tty" > /etc/modules-load.d/tty0tty.conf
+	${CP} 99-tty0tty.rules  /etc/udev/rules.d/
+	service udev reload
+	chown root:root /etc/udev/rules.d/99-tty0tty.rules
 
 
 uninstall:
@@ -50,7 +51,7 @@ uninstall:
 
 
 clean:
-	rm -rf *.o *~ core .depend .*.cmd *.ko *.mod.c .tmp_versions modules.order Module.symvers
+	rm -rf *.o *~ core .depend .*.cmd *.ko *.mod.c *.mod .tmp_versions modules.order Module.symvers
 
 depend .depend dep:
 	$(CC) $(CFLAGS) -M *.c > .depend
