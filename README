@@ -1,6 +1,6 @@
 
 
-tty0tty - linux null modem emulator v1.2 
+tty0tty - linux null modem emulator v1.3 
 
 
 This is the tty0tty directory tree:
@@ -24,7 +24,7 @@ pts (unix98):
 
 module:
 
- The module is tested in kernel 3.10.2 (debian) 
+ The module is tested in kernels from 3.10.2 to 5.3.15 (debian) 
 
   When loaded, create 8 ttys interconnected:
   /dev/tnt0  <=>  /dev/tnt1 
@@ -48,6 +48,10 @@ Requirements:
 
   for module build is necessary kernel-headers or kernel source
 
+    sudo apt-get  update  
+    sudo apt-get  install linux-headers-`uname -r`
+
+
 
 make install set the devices permissions automatically in udev creating the file /etc/udev/rules.d/99-tty0tty.rules with rules:
 
@@ -60,7 +64,7 @@ make install set the devices permissions automatically in udev creating the file
   SUBSYSTEM=="tty", KERNEL=="tnt6", GROUP="dialout", MODE="0660"
   SUBSYSTEM=="tty", KERNEL=="tnt7", GROUP="dialout", MODE="0660"
 
-It's possible edit rules and create permanet symbolic names with the parameter SYMLINK:
+It's possible edit rules and create permanent symbolic names with the parameter SYMLINK:
 
   SUBSYSTEM=="tty", KERNEL=="tnt0", GROUP="dialout", MODE="0660", SYMLINK+="ttyUSB10"
   SUBSYSTEM=="tty", KERNEL=="tnt1", GROUP="dialout", MODE="0660", SYMLINK+="ttyUSB11"
@@ -72,6 +76,9 @@ To add your user to dialout group use the command:
 sudo usermod -a -G dialout your_user_name
 
 after this is necessary logout and login to group permissions take effect.
+
+
+To dkms support use the scripts dkms-install.sh and  dkms-remove.sh
 
 
 For e-mail suggestions :  lcgamboa@yahoo.com
