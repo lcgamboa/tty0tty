@@ -1,0 +1,14 @@
+Source: tty0tty
+Section: kernel
+Priority: optional
+Maintainer: Pascal Jean <pascal.jean@piduino.org>
+Build-Depends: debhelper (>= 9), dkms
+Standards-Version: 3.9.8
+Homepage: https://github.com/lcgamboa/tty0tty
+
+Package: tty0tty-dkms
+Section: kernel
+Priority: optional
+Architecture: all
+Depends: ${misc:Depends}
+Description: DKMS source for the tty0tty null modem emulator module

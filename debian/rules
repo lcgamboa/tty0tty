@@ -1,0 +1,20 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/pkg-info.mk
+
+%:
+	dh $@ --with dkms
+
+override_dh_install:
+	dh_install module/Makefile module/tty0tty.c usr/src/tty0tty-$(DEB_VERSION_UPSTREAM)/
+	dh_install module/99-tty0tty.rules etc/udev/rules.d/
+	dh_install module/tty0tty.conf etc/modules-load.d/
+
+override_dh_dkms:
+	dh_dkms -V $(DEB_VERSION_UPSTREAM)
+
+override_dh_auto_configure:
+override_dh_auto_build:
+override_dh_auto_test:
+override_dh_auto_install:
+override_dh_auto_clean:
