@@ -16,7 +16,7 @@ This is the tty0tty directory tree:
 
 When run connect two pseudo-ttys and show the connection names:
 
-(/dev/pts/1) <=> (/dev/pts/2) 
+    (/dev/pts/1) <-> (/dev/pts/2) 
 
 the connection is:
 
@@ -27,11 +27,12 @@ the connection is:
 
 The module is tested in kernels from 3.10.2 to 5.3.15 (debian) 
 
-When loaded, create 8 ttys interconnected:  
-    /dev/tnt0  <=>  /dev/tnt1 
-    /dev/tnt2  <=>  /dev/tnt3 
-    /dev/tnt4  <=>  /dev/tnt5 
-    /dev/tnt6  <=>  /dev/tnt7 
+When loaded, create 8 ttys interconnected:
+
+    /dev/tnt0  <->  /dev/tnt1 
+    /dev/tnt2  <->  /dev/tnt3 
+    /dev/tnt4  <->  /dev/tnt5 
+    /dev/tnt6  <->  /dev/tnt7 
 
 the connection is:
 
@@ -114,7 +115,7 @@ To add your user to dialout group use the command:
 after this is necessary logout and login to group permissions take effect.
 
 
-To dkms support use the scripts dkms-install.sh and  dkms-remove.sh
+To dkms support use the scripts `dkms-install.sh` and  `dkms-remove.sh`
 
 
 For e-mail suggestions :  lcgamboa@yahoo.com
