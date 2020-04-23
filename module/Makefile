@@ -31,7 +31,7 @@ all:
 
 
 
-install: default rules
+install: all rules
 	${MKDIR} ${MODULEDIR}
 	${CP} -v tty0tty.ko ${MODULEDIR}
 	depmod
