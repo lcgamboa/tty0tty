@@ -1,10 +1,12 @@
 # Comment/uncomment the following line to disable/enable debugging
 DEBUG = n
 
+KVERSION:= $(shell uname -r)
+
 MKDIR= mkdir -p
 CP= cp
 RM= rm -f
-MODULEDIR= /lib/modules/`uname -r`/misc/
+MODULEDIR= /lib/modules/$(KVERSION)/misc/
 
 # Add your debugging flag (or not) to CFLAGS
 ifeq ($(DEBUG),y)
@@ -17,18 +19,16 @@ EXTRA_CFLAGS += $(DEBFLAGS) -I..
 
 ifneq ($(KERNELRELEASE),)
 # call from kernel build system
+else
+KERNELDIR ?= /lib/modules/$(KVERSION)/build
+PWD := $(shell pwd)
+endif
 
 obj-m	:= tty0tty.o 
 
-else
-
-KERNELDIR ?= /lib/modules/$(shell uname -r)/build
-PWD       := $(shell pwd)
-
-default:
+all: 
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
 
-endif
 
 
 install: default rules
@@ -49,9 +49,8 @@ uninstall:
 	$(RM) /etc/modules-load.d/tty0tty.conf
 	$(RM) /etc/udev/rules.d/99-tty0tty.rules
 
-
 clean:
-	rm -rf *.o *~ core .depend .*.cmd *.ko *.mod.c *.mod .tmp_versions modules.order Module.symvers
+	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
 
 depend .depend dep:
 	$(CC) $(CFLAGS) -M *.c > .depend
