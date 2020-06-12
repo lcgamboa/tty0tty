@@ -53,7 +53,7 @@ repository from [piduino.org](http://apt.piduino.org), so you should do the foll
     wget -O- http://www.piduino.org/piduino-key.asc | sudo apt-key add -
     sudo add-apt-repository 'deb http://apt.piduino.org stretch piduino'
     sudo apt update
-    sudo apt tty0tty-dkms
+    sudo apt install tty0tty-dkms
 
 ## Build from source
 
