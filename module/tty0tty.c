@@ -91,9 +91,52 @@ struct tty0tty_serial {
 static struct tty0tty_serial *tty0tty_table[TTY0TTY_MINORS];	/* initially all NULL */
 
 
+static struct tty0tty_serial *get_shadow_tty(int index)
+{
+	struct tty0tty_serial *shadow = NULL;
+	int shadow_idx = index ^ 1;
+
+	if ((index < TTY0TTY_MINORS) &&
+		(tty0tty_table[shadow_idx] != NULL) &&
+		(tty0tty_table[shadow_idx]->open_count > 0)) {
+		shadow = tty0tty_table[shadow_idx];
+#ifdef SCULL_DEBUG
+		printk(KERN_DEBUG "%s - shadow idx: %d\n", __FUNCTION__, shadow_idx);
+#endif
+	}
+
+	return shadow;
+}
+
+static void update_shadow_msr(int index, int msr)
+{
+	struct tty0tty_serial *shadow;
+
+#ifdef SCULL_DEBUG
+	printk(KERN_DEBUG "%s - 0x%02x\n", __FUNCTION__, msr);
+#endif
+
+	if ((shadow = get_shadow_tty(index)) != NULL) {
+		if((shadow->msr & MSR_CTS) != (msr & MSR_CTS))
+			shadow->icount.cts++;
+
+		if((shadow->msr & MSR_DSR) != (msr & MSR_DSR))
+			shadow->icount.dsr++;
+
+		if((shadow->msr & MSR_CD) != (msr & MSR_CD))
+			shadow->icount.dcd++;
+
+		if (msr != shadow->msr) {
+			shadow->msr = msr;
+			wake_up_interruptible(&shadow->wait);
+		}
+	}
+}
+
 static int tty0tty_open(struct tty_struct *tty, struct file *file)
 {
 	struct tty0tty_serial *tty0tty;
+	struct tty0tty_serial *shadow;
 	int index;
 	int msr=0;
 	int mcr=0;
@@ -123,18 +166,8 @@ static int tty0tty_open(struct tty_struct *tty, struct file *file)
 	tport[index].tty=tty;
 	tty->port = &tport[index];
 
-	if( (index % 2) == 0)
-	{
-		if(tty0tty_table[index+1] != NULL)
-			if (tty0tty_table[index+1]->open_count > 0)
-				mcr=tty0tty_table[index+1]->mcr;
-	}
-	else
-	{
-		if(tty0tty_table[index-1] != NULL)
-			if (tty0tty_table[index-1]->open_count > 0)
-				mcr=tty0tty_table[index-1]->mcr;
-	}
+	if ((shadow = get_shadow_tty(index)) != NULL)
+		mcr = shadow->mcr;
 
 //null modem connection
 
@@ -151,7 +184,9 @@ static int tty0tty_open(struct tty_struct *tty, struct file *file)
 
 	tty0tty->msr = msr;
 	tty0tty->mcr = 0;
+	memset(&tty0tty->icount, 0, sizeof(tty0tty->icount));
 
+	init_waitqueue_head(&tty0tty->wait);
 
 	/* register the tty driver */
 
@@ -174,18 +209,7 @@ static void do_close(struct tty0tty_serial *tty0tty)
 #ifdef SCULL_DEBUG
 	printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__,tty0tty->tty->index);
 #endif
-	if( (tty0tty->tty->index % 2) == 0)
-	{
-		if(tty0tty_table[tty0tty->tty->index+1] != NULL)
-			if (tty0tty_table[tty0tty->tty->index+1]->open_count > 0)
-				tty0tty_table[tty0tty->tty->index+1]->msr=msr;
-	}
-	else
-	{
-		if(tty0tty_table[tty0tty->tty->index-1] != NULL)
-			if (tty0tty_table[tty0tty->tty->index-1]->open_count > 0)
-				tty0tty_table[tty0tty->tty->index-1]->msr=msr;
-	}
+	update_shadow_msr(tty0tty->tty->index, msr);
 
 	down(&tty0tty->sem);
 	if (!tty0tty->open_count) {
@@ -215,6 +239,7 @@ static void tty0tty_close(struct tty_struct *tty, struct file *file)
 static int tty0tty_write(struct tty_struct *tty, const unsigned char *buffer, int count)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
+	struct tty0tty_serial *shadow;
 	int retval = -EINVAL;
 	struct tty_struct  *ttyx = NULL;
 
@@ -234,18 +259,8 @@ static int tty0tty_write(struct tty_struct *tty, const unsigned char *buffer, in
 		/* port was not opened */
 		goto exit;
 
-	if( (tty0tty->tty->index % 2) == 0)
-	{
-		if(tty0tty_table[tty0tty->tty->index+1] != NULL)
-			if (tty0tty_table[tty0tty->tty->index+1]->open_count > 0)
-				ttyx=tty0tty_table[tty0tty->tty->index+1]->tty;
-	}
-	else
-	{
-		if(tty0tty_table[tty0tty->tty->index-1] != NULL)
-			if (tty0tty_table[tty0tty->tty->index-1]->open_count > 0)
-				ttyx=tty0tty_table[tty0tty->tty->index-1]->tty;
-	}
+	if ((shadow = get_shadow_tty(tty0tty->tty->index)) != NULL)
+		ttyx = shadow->tty;
 
 //        tty->low_latency=1;
 
@@ -413,25 +428,15 @@ static int tty0tty_tiocmset(struct tty_struct *tty,
 			unsigned int set, unsigned int clear)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
+	struct tty0tty_serial *shadow;
 	unsigned int mcr = tty0tty->mcr;
 	unsigned int msr=0;
 
 #ifdef SCULL_DEBUG
 	printk(KERN_DEBUG "%s - tnt%i set=0x%08X clear=0x%08X \n", __FUNCTION__,tty->index, set ,clear);
 #endif
-
-	if( (tty0tty->tty->index % 2) == 0)
-	{
-		if(tty0tty_table[tty0tty->tty->index+1] != NULL)
-			if (tty0tty_table[tty0tty->tty->index+1]->open_count > 0)
-				msr=tty0tty_table[tty0tty->tty->index+1]->msr;
-	}
-	else
-	{
-		if(tty0tty_table[tty0tty->tty->index-1] != NULL)
-			if (tty0tty_table[tty0tty->tty->index-1]->open_count > 0)
-				msr=tty0tty_table[tty0tty->tty->index-1]->msr;
-	}
+	if ((shadow = get_shadow_tty(tty0tty->tty->index)) != NULL)
+		msr = shadow->msr;
 
 //null modem connection
 
@@ -465,18 +470,8 @@ static int tty0tty_tiocmset(struct tty_struct *tty,
 	/* set the new MCR value in the device */
 	tty0tty->mcr = mcr;
 
-	if( (tty0tty->tty->index % 2) == 0)
-	{
-		if(tty0tty_table[tty0tty->tty->index+1] != NULL)
-			if (tty0tty_table[tty0tty->tty->index+1]->open_count > 0)
-				tty0tty_table[tty0tty->tty->index+1]->msr=msr;
-	}
-	else
-	{
-		if(tty0tty_table[tty0tty->tty->index-1] != NULL)
-			if (tty0tty_table[tty0tty->tty->index-1]->open_count > 0)
-				tty0tty_table[tty0tty->tty->index-1]->msr=msr;
-	}
+	update_shadow_msr(tty0tty->tty->index, msr);
+
 	return 0;
 }
 
