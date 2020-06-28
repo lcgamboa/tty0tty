@@ -56,7 +56,7 @@ MODULE_DESCRIPTION( DRIVER_DESC );
 MODULE_LICENSE("GPL");
 
 
-#define TTY0TTY_MAJOR		240	/* experimental range */
+#define TTY0TTY_MAJOR		0	/* dynamic allocation of major number */
 #define TTY0TTY_MINORS		8	/* device number, always even*/
 
 /* fake UART values */
