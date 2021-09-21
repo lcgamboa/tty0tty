@@ -276,7 +276,7 @@ exit:
 	return retval;
 }
 
-static int tty0tty_write_room(struct tty_struct *tty)
+static unsigned int tty0tty_write_room(struct tty_struct *tty)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
 	int room = -EINVAL;
