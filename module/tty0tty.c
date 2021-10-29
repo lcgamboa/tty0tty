@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2013-2019  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2013-2021  Luis Claudio Gambôa Lopes
 
    Based in Tiny TTY driver -  Copyright (C) 2002-2004 Greg Kroah-Hartman (greg@kroah.com)
 
@@ -39,8 +39,13 @@
 #include <linux/serial.h>
 #include <linux/sched.h>
 #include <asm/uaccess.h>
-
 #include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 14, 0)
+int tty_check_change(struct tty_struct *tty);
+speed_t tty_termios_input_baud_rate(struct ktermios *termios);
+#endif
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
 #include <linux/sched/signal.h>
 #endif
@@ -51,8 +56,8 @@
 #define DRIVER_DESC "tty0tty null modem driver"
 
 /* Module information */
-MODULE_AUTHOR( DRIVER_AUTHOR );
-MODULE_DESCRIPTION( DRIVER_DESC );
+MODULE_AUTHOR(DRIVER_AUTHOR);
+MODULE_DESCRIPTION(DRIVER_DESC);
 MODULE_LICENSE("GPL");
 
 
@@ -276,7 +281,11 @@ exit:
 	return retval;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 14, 0)
+static unsigned int tty0tty_write_room(struct tty_struct *tty)
+#else
 static int tty0tty_write_room(struct tty_struct *tty)
+#endif
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
 	int room = -EINVAL;
@@ -694,6 +703,7 @@ static int tty0tty_ioctl_tcflsh(struct tty_struct *tty,
 		if (ld && ld->ops->flush_buffer) {
 			ld->ops->flush_buffer(tty);
 			tty_unthrottle(tty);
+	 	        tty_driver_flush_buffer(tty);
 		}
 		/* fall through */
 	case TCOFLUSH:
