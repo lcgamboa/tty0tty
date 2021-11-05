@@ -51,6 +51,11 @@ speed_t tty_termios_input_baud_rate(struct ktermios *termios);
 #endif
 
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
+#define tty_alloc_driver(x, y) alloc_tty_driver(x)
+#define tty_driver_kref_puf(x) put_tty_driver(x)
+#endif
+
 #define DRIVER_VERSION "v1.3"
 #define DRIVER_AUTHOR "Luis Claudio Gamboa Lopes <lcgamboa@yahoo.com>"
 #define DRIVER_DESC "tty0tty null modem driver"
@@ -785,8 +790,8 @@ static int __init tty0tty_init(void)
 	printk(KERN_DEBUG "%s - \n", __FUNCTION__);
 #endif
 	/* allocate the tty driver */
-	tty0tty_tty_driver = alloc_tty_driver(TTY0TTY_MINORS);
-	if (!tty0tty_tty_driver)
+	tty0tty_tty_driver = tty_alloc_driver(TTY0TTY_MINORS, 0);
+	if (IS_ERR(tty0tty_tty_driver) || !tty0tty_tty_driver)
 		return -ENOMEM;
 
 	/* initialize the tty driver */
@@ -818,7 +823,7 @@ static int __init tty0tty_init(void)
 	retval = tty_register_driver(tty0tty_tty_driver);
 	if (retval) {
 		printk(KERN_ERR "failed to register tty0tty tty driver");
-		put_tty_driver(tty0tty_tty_driver);
+		tty_driver_kref_put(tty0tty_tty_driver);
 		return retval;
 	}
 
