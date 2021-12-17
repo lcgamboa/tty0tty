@@ -21,7 +21,7 @@ When run connect two pseudo-ttys and show the connection names:
 the connection is:
 
     TX -> RX
-    RX <- TX 	
+    RX <- TX
 
 ### module
 
@@ -45,22 +45,13 @@ the connection is:
     DTR  ->  DSR
     DTR  ->  CD
   
-## Quickstart guide
-
-The fastest and safest way to install tty0tty dkms module on Debian is to use the APT 
-repository from [piduino.org](http://apt.piduino.org), so you should do the following :
-
-    wget -O- http://www.piduino.org/piduino-key.asc | sudo apt-key add -
-    sudo add-apt-repository 'deb http://apt.piduino.org stretch piduino'
-    sudo apt update
-    sudo apt install tty0tty-dkms
 
 ## Build from source
 
 
 for module build is necessary kernel-headers or kernel source:
 
-    sudo apt-get  update  
+    sudo apt-get  update
     sudo apt-get  install linux-headers-`uname -r`
     cd module
     make
@@ -70,11 +61,11 @@ for debian package:
 
     sudo apt-get install devscripts build-essential lintian
 
-Download the archive file from https://github.com/epsilonrt/tty0tty/archive/v1.3.tar.gz
+Download the archive file from https://github.com/lcgamboa/tty0tty/archive/refs/heads/master.zip
 
-    wget https://github.com/epsilonrt/tty0tty/archive/v1.3.tar.gz
-    tar xvzf tty0tty-1.3.tar.gz
-    cd tty0tty-1.3
+    wget https://github.com/lcgamboa/tty0tty/archive/refs/heads/master.zip
+    unzip master.zip
+    cd tty0tty-master
     dpkg-buildpackage
 
 to clean:
