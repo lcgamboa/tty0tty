@@ -41,17 +41,14 @@
 #include <asm/uaccess.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 14, 0)
-int tty_check_change(struct tty_struct *tty);
-speed_t tty_termios_input_baud_rate(struct ktermios *termios);
-#endif
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
 #include <linux/sched/signal.h>
 #endif
 
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 13, 0)
+int tty_check_change(struct tty_struct *tty);
+speed_t tty_termios_input_baud_rate(struct ktermios *termios);
+#else
 #define tty_alloc_driver(x, y) alloc_tty_driver(x)
 #define tty_driver_kref_puf(x) put_tty_driver(x)
 #endif
@@ -710,7 +707,7 @@ static int tty0tty_ioctl_tcflsh(struct tty_struct *tty,
 			tty_unthrottle(tty);
 	 	        tty_driver_flush_buffer(tty);
 		}
-		/* fall through */
+		fallthrough; 
 	case TCOFLUSH:
 		tty_driver_flush_buffer(tty);
 		break;
