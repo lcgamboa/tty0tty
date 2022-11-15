@@ -1,15 +1,16 @@
 # tty0tty
 
-_linux null modem emulator v1.3_
+_linux null modem emulator v1.4_
 
 
 ## Directory tree
 
 This is the tty0tty directory tree:
 
-* `module` : linux kernel module null-modem
-* `pts`    : null-modem using ptys (without handshake lines)
-* `debian` : debian package build tree
+* `module`  : linux kernel module null-modem
+* `pts`     : null-modem using ptys (without handshake lines)
+* `debian`  : debian package build tree
+* `ssniffer`: simple serial sniffer using tty0tty driver ports
 
 
 ### pts (unix98)
@@ -45,9 +46,18 @@ the connection is:
     DTR  ->  DSR
     DTR  ->  CD
   
+### ssniffer
+
+This is a simple serial sniffer program supporting handshake lines (using tty0tty module) with two working modes. 
+In normal mode the data is displayed on the console as in the figure below. 
+In ysplitter mode a third virtual port is connected and has access to the data sent
+ by the device port and by the control application.
+
+![PICsimLab](ssniffer/tty0ttySerialSniffer.png "PICsimLab")  
 
 ## Build from source
 
+### module
 
 for module build is necessary kernel-headers or kernel source:
 
@@ -72,14 +82,6 @@ to clean:
 
     dh_clean
 
-for pts build:
-
-    cd pts
-    make
-
-then run with:
-
-    ./tty0tty
 
 `make install` set the devices permissions automatically in udev creating the file /etc/udev/rules.d/99-tty0tty.rules with rules:
 
@@ -108,5 +110,30 @@ after this is necessary logout and login to group permissions take effect.
 
 To dkms support use the scripts `dkms-install.sh` and  `dkms-remove.sh`
 
+### pts
 
+    cd pts
+    make
+
+then run with:
+
+    ./tty0tty
+    
+### ssniffer
+
+    cd ssnifer
+    make
+
+then for normal mode run with:
+
+    ./ssniffer /dev/ttyUSB0 2 color
+and connect application in /dev/tnt3 virtual port.   
+    
+    
+ Or for ysplitter mode run with:
+ 
+    ./ssniffer /dev/ttyUSB0 2 ysplitter4
+and connect application in /dev/tnt3 virtual port and second terminal in /dev/tnt5 virtual port.    
+       
+    
 For e-mail suggestions :  lcgamboa@yahoo.com
