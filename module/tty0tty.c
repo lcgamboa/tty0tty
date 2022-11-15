@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2013-2021  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2013-2022  Luis Claudio Gambôa Lopes
 
    Based in Tiny TTY driver -  Copyright (C) 2002-2004 Greg Kroah-Hartman (greg@kroah.com)
 
@@ -53,7 +53,7 @@ speed_t tty_termios_input_baud_rate(struct ktermios *termios);
 #define tty_driver_kref_puf(x) put_tty_driver(x)
 #endif
 
-#define DRIVER_VERSION "v1.3"
+#define DRIVER_VERSION "v1.4"
 #define DRIVER_AUTHOR "Luis Claudio Gamboa Lopes <lcgamboa@yahoo.com>"
 #define DRIVER_DESC "tty0tty null modem driver"
 
@@ -96,6 +96,54 @@ struct tty0tty_serial {
 };
 
 static struct tty0tty_serial *tty0tty_table[TTY0TTY_MINORS];	/* initially all NULL */
+
+
+
+/*attributes*/
+
+/*
+ * /sys/device/virtual/tty/tntx/
+ *
+ * the attribute 'baudrate' contains the baudrate of virtual serial 
+ * port (return 0 if port is not open) and it supports poll() 
+ * to detect when value is changed.
+ */
+static struct device *tty0tty_dev[TTY0TTY_MINORS];
+
+/* Sysfs attribute */
+static ssize_t baudrate_show(struct device *dev,
+			    struct device_attribute *attr, char *buf){
+	int baud = 0;
+	struct tty0tty_serial *tty0tty = dev_get_drvdata(dev);
+
+#ifdef SCULL_DEBUG
+	printk(KERN_DEBUG "%s \n", __FUNCTION__);
+#endif
+
+	if (!tty0tty)
+		return sprintf(buf, "%i\n", baud);
+
+    if (!tty0tty->tty)
+		return sprintf(buf, "%i\n", baud);
+
+    down(&tty0tty->sem);
+	if (tty0tty->open_count) 
+	{
+		baud = tty_get_baud_rate(tty0tty->tty);
+	}
+	up(&tty0tty->sem);
+
+	return sprintf(buf, "%i\n", baud);
+}
+
+static DEVICE_ATTR_RO(baudrate);
+
+static struct attribute *tty0tty_dev_attrs[] = {
+	&dev_attr_baudrate.attr,
+	NULL
+};
+
+ATTRIBUTE_GROUPS(tty0tty_dev);
 
 
 static struct tty0tty_serial *get_shadow_tty(int index)
@@ -157,19 +205,6 @@ static int tty0tty_open(struct tty_struct *tty, struct file *file)
 	/* get the serial object associated with this tty pointer */
 	index = tty->index;
 	tty0tty = tty0tty_table[index];
-	if (tty0tty == NULL) {
-		/* first time accessing this device, let's create it */
-		tty0tty = kmalloc(sizeof(*tty0tty), GFP_KERNEL);
-		if (!tty0tty)
-			return -ENOMEM;
-
-		sema_init(&tty0tty->sem,1);
-		tty0tty->open_count = 0;
-
-		tty0tty_table[index] = tty0tty;
-
-	}
-
 	tport[index].tty=tty;
 	tty->port = &tport[index];
 
@@ -195,7 +230,7 @@ static int tty0tty_open(struct tty_struct *tty, struct file *file)
 
 	init_waitqueue_head(&tty0tty->wait);
 
-	/* register the tty driver */
+	/* register the tty driver_data */
 
 	down(&tty0tty->sem);
 
@@ -206,6 +241,15 @@ static int tty0tty_open(struct tty_struct *tty, struct file *file)
 	++tty0tty->open_count;
 
 	up(&tty0tty->sem);
+
+    /* Notify open*/
+	if (tty0tty_dev[index]){
+		sysfs_notify(&tty0tty_dev[index]->kobj, NULL, "baudrate");
+#ifdef SCULL_DEBUG
+	    printk(KERN_DEBUG "%s - %s\n", __FUNCTION__, "sysfs_notify baudrate (open)");
+#endif
+	}
+
 	return 0;
 }
 
@@ -219,15 +263,18 @@ static void do_close(struct tty0tty_serial *tty0tty)
 	update_shadow_msr(tty0tty->tty->index, msr);
 
 	down(&tty0tty->sem);
-	if (!tty0tty->open_count) {
-		/* port was never opened */
-		goto exit;
+	if (tty0tty->open_count) {
+		--tty0tty->open_count;
 	}
-
-	--tty0tty->open_count;
-exit:
 	up(&tty0tty->sem);
 
+	/* Notify close*/
+	if (tty0tty_dev[tty0tty->tty->index]){
+		sysfs_notify(&tty0tty_dev[tty0tty->tty->index]->kobj, NULL, "baudrate");
+#ifdef SCULL_DEBUG
+	    printk(KERN_DEBUG "%s - %s\n", __FUNCTION__, "sysfs_notify baudrate (close)");
+#endif
+	}
 
 	return;
 }
@@ -247,7 +294,6 @@ static int tty0tty_write(struct tty_struct *tty, const unsigned char *buffer, in
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
 	struct tty0tty_serial *shadow;
-	int retval = -EINVAL;
 	struct tty_struct  *ttyx = NULL;
 
 #ifdef SCULL_DEBUG
@@ -261,26 +307,19 @@ static int tty0tty_write(struct tty_struct *tty, const unsigned char *buffer, in
 		return -ENODEV;
 
 	down(&tty0tty->sem);
-
-	if (!tty0tty->open_count)
-		/* port was not opened */
-		goto exit;
-
-	if ((shadow = get_shadow_tty(tty0tty->tty->index)) != NULL)
-		ttyx = shadow->tty;
-
-//        tty->low_latency=1;
-
-	if(ttyx != NULL)
+	if (tty0tty->open_count)
 	{
-		tty_insert_flip_string(ttyx->port, buffer, count);
-		tty_flip_buffer_push(ttyx->port);
-		retval=count;
+	  if ((shadow = get_shadow_tty(tty0tty->tty->index)) != NULL)
+	  	  ttyx = shadow->tty;
+//        tty->low_latency=1;
+	  if(ttyx != NULL)
+	  {
+		  tty_insert_flip_string(ttyx->port, buffer, count);
+		  tty_flip_buffer_push(ttyx->port);
+	  }
 	}
-
-exit:
 	up(&tty0tty->sem);
-	return retval;
+	return count;
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 14, 0)
@@ -290,26 +329,21 @@ static int tty0tty_write_room(struct tty_struct *tty)
 #endif
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
-	int room = -EINVAL;
-
+	int room = 0;
+	
 #ifdef SCULL_DEBUG
-	printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__,tty->index);
+//	printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__,tty->index);
 #endif
 
 	if (!tty0tty)
 		return -ENODEV;
 
 	down(&tty0tty->sem);
-
-	if (!tty0tty->open_count) {
-		/* port was not opened */
-		goto exit;
+	if (tty0tty->open_count) 
+	{
+		/* calculate how much room is left in the device */
+	    room = 255;
 	}
-
-	/* calculate how much room is left in the device */
-	room = 255;
-
-exit:
 	up(&tty0tty->sem);
 	return room;
 }
@@ -404,6 +438,15 @@ static void tty0tty_set_termios(struct tty_struct *tty, struct ktermios *old_ter
 	/* get the baud rate wanted */
 	printk(KERN_DEBUG " - baud rate = %d\n", tty_get_baud_rate(tty));
 #endif
+
+    /* Notify speed*/
+	if (tty0tty_dev[tty->index]){
+		sysfs_notify(&tty0tty_dev[tty->index]->kobj, NULL, "baudrate");
+#ifdef SCULL_DEBUG
+	    printk(KERN_DEBUG "%s - %s\n", __FUNCTION__, "sysfs_notify baudrate (change)");
+#endif
+	}
+
 }
 
 
@@ -782,6 +825,7 @@ static int __init tty0tty_init(void)
 {
 	int retval;
 	int i;
+	struct tty0tty_serial *tty0tty;
 
 #ifdef SCULL_DEBUG
 	printk(KERN_DEBUG "%s - \n", __FUNCTION__);
@@ -799,7 +843,7 @@ static int __init tty0tty_init(void)
 	tty0tty_tty_driver->major = TTY0TTY_MAJOR;
 	tty0tty_tty_driver->type = TTY_DRIVER_TYPE_SERIAL;
 	tty0tty_tty_driver->subtype = SERIAL_TYPE_NORMAL;
-	tty0tty_tty_driver->flags = /*TTY_DRIVER_RESET_TERMIOS |*/ TTY_DRIVER_REAL_RAW ;
+	tty0tty_tty_driver->flags = TTY_DRIVER_DYNAMIC_DEV | TTY_DRIVER_REAL_RAW ;
 	/* no more devfs subsystem */
 	tty0tty_tty_driver->init_termios = tty_std_termios;
 	tty0tty_tty_driver->init_termios.c_iflag = 0;
@@ -823,6 +867,22 @@ static int __init tty0tty_init(void)
 		tty_driver_kref_put(tty0tty_tty_driver);
 		return retval;
 	}
+
+	for (i = 0; i < TTY0TTY_MINORS; i++) {
+        /* first time accessing this device, let's create it */
+        tty0tty = kmalloc(sizeof(*tty0tty), GFP_KERNEL);
+        if (!tty0tty)
+           return -ENOMEM;
+        tty0tty_table[i] = tty0tty;
+        sema_init(&tty0tty->sem, 1);
+        tty0tty_table[i]->open_count = 0;
+
+        tty0tty_dev[i] = tty_register_device_attr(tty0tty_tty_driver, i, NULL, tty0tty, tty0tty_dev_groups);
+        if (IS_ERR(tty0tty_dev[i])) {
+            tty_unregister_device(tty0tty_tty_driver, i);
+            return PTR_ERR(tty0tty_dev[i]);
+        }
+    }
 
 	printk(KERN_INFO DRIVER_DESC " " DRIVER_VERSION "\n");
 	return retval;
