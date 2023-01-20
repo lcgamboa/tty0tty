@@ -45,6 +45,32 @@
 #include <linux/sched/signal.h>
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+
+static int user_termios_to_kernel_termios(struct ktermios *k,
+						 struct termios2 __user *u)
+{
+	return copy_from_user(k, u, sizeof(struct termios2));
+}
+
+static int kernel_termios_to_user_termios(struct termios2 __user *u,
+						 struct ktermios *k)
+{
+	return copy_to_user(u, k, sizeof(struct termios2));
+}
+static int user_termios_to_kernel_termios_1(struct ktermios *k,
+						   struct termios __user *u)
+{
+	return copy_from_user(k, u, sizeof(struct termios));
+}
+
+static int kernel_termios_to_user_termios_1(struct termios __user *u,
+						   struct ktermios *k)
+{
+	return copy_to_user(u, k, sizeof(struct termios));
+}
+#endif
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 13, 0)
 int tty_check_change(struct tty_struct *tty);
 speed_t tty_termios_input_baud_rate(struct ktermios *termios);
@@ -351,8 +377,11 @@ static int tty0tty_write_room(struct tty_struct *tty)
 
 
 #define RELEVANT_IFLAG(iflag) ((iflag) & (IGNBRK|BRKINT|IGNPAR|PARMRK|INPCK))
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+static void tty0tty_set_termios(struct tty_struct *tty, const struct ktermios *old_termios)
+#else
 static void tty0tty_set_termios(struct tty_struct *tty, struct ktermios *old_termios)
+#endif
 {
 	unsigned int cflag;
 
