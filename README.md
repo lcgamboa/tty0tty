@@ -69,7 +69,7 @@ for module build is necessary kernel-headers or kernel source:
 
 for debian package:
 
-    sudo apt-get install devscripts build-essential lintian
+    sudo apt-get install devscripts build-essential lintian debhelper
 
 Download the archive file from https://github.com/lcgamboa/tty0tty/archive/refs/heads/master.zip
 
