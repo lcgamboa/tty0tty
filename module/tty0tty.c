@@ -779,7 +779,11 @@ static int tty0tty_ioctl_tcflsh(struct tty_struct *tty,
 			tty_unthrottle(tty);
 	 	        tty_driver_flush_buffer(tty);
 		}
-		fallthrough; 
+#if defined(__has_attribute)
+#if __has_attribute(__fallthrough__)
+		__attribute__((__fallthrough__));
+#endif
+#endif
 	case TCOFLUSH:
 		tty_driver_flush_buffer(tty);
 		break;
