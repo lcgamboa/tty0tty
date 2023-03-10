@@ -1,0 +1,20 @@
+Source: tty0tty
+Section: kernel
+Priority: optional
+Maintainer: Pascal Jean <pascal.jean@piduino.org>
+Build-Depends: debhelper (>= 10), dkms
+Standards-Version: 3.9.8
+Homepage: https://github.com/lcgamboa/tty0tty
+
+Package: ssniffer
+Section: comm
+Priority: optional
+Architecture: any
+Multi-Arch: foreign
+Depends: ${misc:Depends}
+Description: Simple serial sniffer
+  This is a simple serial sniffer program supporting handshake lines 
+  (using tty0tty module) with two working modes. 
+  In normal mode the data is displayed on the console as in the figure below. 
+  In ysplitter mode a third virtual port is connected and has access to 
+  the data sent by the device port and by the control application.

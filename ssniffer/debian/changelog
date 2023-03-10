@@ -1,0 +1,72 @@
+tty0tty (1.41) unstable; urgency=low
+
+  * Fixes warning: "tty_alloc_driver" redefined
+  * Fixes #2 error: ‘fallthrough’ undeclared
+  * Fixes #1 Issue: install debhelper dependency
+
+ -- Pascal Jean <pascal.jean@piduino.org>  Fri, 10 Mar 2023 18:21:22 +0100
+
+tty0tty (1.4) unstable; urgency=low
+
+  * Add missing functions to 6.1.0 compatibility
+  * ssniffer utility added
+  * Support to show baudrate parameter in sysfs and version update
+  * removing warnings
+  * Readme links updated
+  * Merge pull request #7 from jjguti/fix/support-5.15
+  * Fix building with 5.15
+  * support to kernel 5.14
+  * Merge pull request #5 from rhulme/master
+  * Use dynamic allocation of major device number
+  * Merge pull request #4 from rhulme/master
+  * Link signal lines (CTS,RTS etc.) together properly.
+  * Make indentation consistent and tidy up trailing whitespace
+  * chg: Readme updated !minor
+  * makefile updated
+  * Makefile updated
+  * Merge pull request #2 from epsilonrt/master
+
+ -- Luis Claudio Gambôa Lopes <lcgamboa@yahoo.com>  Thu, 19 Jan 2023 22:45:20 -0300
+
+tty0tty (1.3) unstable; urgency=low
+
+  * Update README.md
+  * Add README.md
+  * Add debian package tree
+  * Readme updated
+  * dkms support added
+  * debug message paramters fixed
+  * break_ctl added
+  * TCGETS2 and TCSETS2 added
+  * new ioctl TCGETS TCSETS TCFLSH implemented
+  * Readme updated
+  * README updated
+  * module Makefile install bug fixed
+  * Makefile install created
+  * Merge branch 'master' of https://github.com/lcgamboa/tty0tty
+  * Delete LICENSE
+  * Initial commit
+  * device file permission info updated
+
+ -- Pascal Jean <pascal.jean@piduino.org>  Tue, 11 Feb 2020 23:31:37 +0100
+
+tty0tty (1.2) unstable; urgency=low
+
+  * kernel 3.10.2 support
+
+ -- Luis Claudio Gamboa Lopes <lcgamboa@yahoo.com>  Tue, 11 Aug 2015 13:47:30 -0300
+
+tty0tty (1.1) unstable; urgency=low
+
+  * bug fix: mcr set to 0 when port is closed
+
+ -- Luis Claudio Gamboa Lopes <lcgamboa@yahoo.com>  Tue, 11 Aug 2015 13:43:34 -0300
+
+tty0tty (1.0) unstable; urgency=low
+
+  * bug fix
+
+ -- Luis Claudio Gamboa Lopes <lcgamboa@yahoo.com>  Tue, 11 Aug 2015 13:37:38 -0300
+
+tty0tty (0.9) unstable; urgency=low
+
