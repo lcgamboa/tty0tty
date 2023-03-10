@@ -75,7 +75,9 @@ static int kernel_termios_to_user_termios_1(struct termios __user *u,
 int tty_check_change(struct tty_struct *tty);
 speed_t tty_termios_input_baud_rate(struct ktermios *termios);
 #else
+#ifndef tty_alloc_driver
 #define tty_alloc_driver(x, y) alloc_tty_driver(x)
+#endif
 #define tty_driver_kref_puf(x) put_tty_driver(x)
 #endif
 
@@ -779,7 +781,11 @@ static int tty0tty_ioctl_tcflsh(struct tty_struct *tty,
 			tty_unthrottle(tty);
 	 	        tty_driver_flush_buffer(tty);
 		}
-		fallthrough; 
+#if defined(__has_attribute)
+#if __has_attribute(__fallthrough__)
+		__attribute__((__fallthrough__));
+#endif
+#endif
 	case TCOFLUSH:
 		tty_driver_flush_buffer(tty);
 		break;
