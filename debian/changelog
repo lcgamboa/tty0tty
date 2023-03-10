@@ -1,4 +1,4 @@
-tty0tty (1.41) buster; urgency=low
+tty0tty (1.41) unstable; urgency=low
 
   * Fixes warning: "tty_alloc_driver" redefined
   * Fixes #2 error: ‘fallthrough’ undeclared
@@ -6,7 +6,7 @@ tty0tty (1.41) buster; urgency=low
 
  -- Pascal Jean <pascal.jean@piduino.org>  Fri, 10 Mar 2023 18:21:22 +0100
 
-tty0tty (1.4) buster; urgency=low
+tty0tty (1.4) unstable; urgency=low
 
   * Add missing functions to 6.1.0 compatibility
   * ssniffer utility added
@@ -26,9 +26,9 @@ tty0tty (1.4) buster; urgency=low
   * Makefile updated
   * Merge pull request #2 from epsilonrt/master
 
- -- lcgamboa <lcgamboa@yahoo.com>  Thu, 19 Jan 2023 22:45:20 -0300
+ -- Luis Claudio Gambôa Lopes <lcgamboa@yahoo.com>  Thu, 19 Jan 2023 22:45:20 -0300
 
-tty0tty (1.3) stretch; urgency=low
+tty0tty (1.3) unstable; urgency=low
 
   * Update README.md
   * Add README.md
