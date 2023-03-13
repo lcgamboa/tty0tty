@@ -57,8 +57,7 @@ In ysplitter mode a third virtual port is connected and has access to the data s
 
 ## Precompiled .deb packages
 
-The fastest and safest way to install tty0tty dkms module or ssniffer on Debian or Ubuntu is to use the APT 
-repository from [piduino.org](http://apt.piduino.org), so you should do the following :
+You can get precompiled tty0tty dkms module or ssniffer packages from the [piduino.org](http://apt.piduino.org) repository for Debian or Ubuntu :
 
     wget -O- http://www.piduino.org/piduino-key.asc | sudo apt-key add -
     sudo add-apt-repository 'deb http://apt.piduino.org buster piduino'
