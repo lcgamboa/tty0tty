@@ -55,6 +55,32 @@ In ysplitter mode a third virtual port is connected and has access to the data s
 
 ![PICsimLab](ssniffer/tty0ttySerialSniffer.png "PICsimLab")  
 
+## Precompiled .deb packages
+
+You can get precompiled tty0tty dkms module or ssniffer packages from the [piduino.org](http://apt.piduino.org) repository for Debian or Ubuntu :
+
+    wget -O- http://www.piduino.org/piduino-key.asc | sudo apt-key add -
+    sudo add-apt-repository 'deb http://apt.piduino.org buster piduino'
+    sudo apt update
+
+The repository added in the `add-apt-repository` command is for the 
+Debian Buster distribution, but you can also choose **bullseye**, 
+**bionic**, **focal** or **jammy**.  
+These repositories provide packages for the **amd64**, **armhf** and 
+**arm64** architectures.
+
+If the `add-apt-repository` command fails, install the `software-properties-common` package like this:
+
+    sudo apt install software-properties-common
+
+### module
+
+    sudo apt install tty0tty-dkms
+
+### ssniffer
+
+    sudo apt install ssniffer
+
 ## Build from source
 
 ### module
@@ -123,16 +149,21 @@ then run with:
 
     cd ssnifer
     make
+    make install
+
+for debian package:
+
+    dpkg-buildpackage
 
 then for normal mode run with:
 
-    ./ssniffer /dev/ttyUSB0 2 color
+    ssniffer /dev/ttyUSB0 2 color
 and connect application in /dev/tnt3 virtual port.   
     
     
  Or for ysplitter mode run with:
  
-    ./ssniffer /dev/ttyUSB0 2 ysplitter4
+    ssniffer /dev/ttyUSB0 2 ysplitter4
 and connect application in /dev/tnt3 virtual port and second terminal in /dev/tnt5 virtual port.    
        
     
