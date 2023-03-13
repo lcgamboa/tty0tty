@@ -9,9 +9,6 @@ CFLAGS += -Wall -O2
 all: $(TARGET)
 
 $(TARGET): $(TARGET).c 
-	@echo "CFLAGS=$(CFLAGS)" | \
-			fold -s -w 70 | \
-			sed -e 's/^/# /'
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDCFLAGS) -o $@ $^
 
 install: $(TARGET)
