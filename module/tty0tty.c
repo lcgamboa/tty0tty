@@ -342,7 +342,14 @@ static int tty0tty_write(struct tty_struct *tty, const unsigned char *buffer, in
 //        tty->low_latency=1;
 	  if(ttyx != NULL)
 	  {
-		  tty_insert_flip_string(ttyx->port, buffer, count);
+		  if((tty->termios.c_cflag & PARENB) && (tty->termios.c_cflag & PARODD))
+		  {
+			  tty_insert_flip_string_fixed_flag(ttyx->port, buffer, TTY_PARITY, count);
+		  }
+		  else
+		  {
+		  	  tty_insert_flip_string(ttyx->port, buffer, count);
+		  }
 		  tty_flip_buffer_push(ttyx->port);
 	  }
 	}
