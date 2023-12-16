@@ -342,8 +342,9 @@ static int tty0tty_write(struct tty_struct *tty, const unsigned char *buffer, in
 //        tty->low_latency=1;
 	  if(ttyx != NULL)
 	  {
-		  if((tty->termios.c_cflag & PARENB) && (tty->termios.c_cflag & PARODD))
+		  if((tty->termios.c_cflag & PARENB) && (tty->termios.c_cflag & CMSPAR) && (tty->termios.c_cflag & PARODD))
 		  {
+			  /* MARK parity bit. */
 			  tty_insert_flip_string_fixed_flag(ttyx->port, buffer, TTY_PARITY, count);
 		  }
 		  else
