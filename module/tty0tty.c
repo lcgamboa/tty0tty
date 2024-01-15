@@ -318,7 +318,7 @@ static void tty0tty_close(struct tty_struct *tty, struct file *file)
 		do_close(tty0tty);
 }
 
-static int tty0tty_write(struct tty_struct *tty, const unsigned char *buffer, int count)
+static ssize_t tty0tty_write(struct tty_struct *tty, const unsigned char *buffer, size_t count)
 {
 	struct tty0tty_serial *tty0tty = tty->driver_data;
 	struct tty0tty_serial *shadow;
