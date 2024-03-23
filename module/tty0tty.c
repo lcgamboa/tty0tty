@@ -78,7 +78,7 @@ speed_t tty_termios_input_baud_rate(struct ktermios *termios);
 #ifndef tty_alloc_driver
 #define tty_alloc_driver(x, y) alloc_tty_driver(x)
 #endif
-#define tty_driver_kref_puf(x) put_tty_driver(x)
+#define tty_driver_kref_put(x) put_tty_driver(x)
 #endif
 
 #define DRIVER_VERSION "v1.4"
@@ -191,7 +191,7 @@ static struct tty0tty_serial *get_shadow_tty(int index)
 	return shadow;
 }
 
-static void update_shadow_msr(int index, int msr)
+static void tty0tty_update_shadow_msr(int index, int msr)
 {
 	struct tty0tty_serial *shadow;
 
@@ -281,14 +281,14 @@ static int tty0tty_open(struct tty_struct *tty, struct file *file)
 	return 0;
 }
 
-static void do_close(struct tty0tty_serial *tty0tty)
+static void tty0tty_do_close(struct tty0tty_serial *tty0tty)
 {
 	unsigned int msr=0;
 
 #ifdef SCULL_DEBUG
 	printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__,tty0tty->tty->index);
 #endif
-	update_shadow_msr(tty0tty->tty->index, msr);
+	tty0tty_update_shadow_msr(tty0tty->tty->index, msr);
 
 	down(&tty0tty->sem);
 	if (tty0tty->open_count) {
@@ -315,7 +315,7 @@ static void tty0tty_close(struct tty_struct *tty, struct file *file)
 	printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__, tty->index);
 #endif
 	if (tty0tty)
-		do_close(tty0tty);
+		tty0tty_do_close(tty0tty);
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
@@ -567,7 +567,7 @@ static int tty0tty_tiocmset(struct tty_struct *tty,
 	/* set the new MCR value in the device */
 	tty0tty->mcr = mcr;
 
-	update_shadow_msr(tty0tty->tty->index, msr);
+	tty0tty_update_shadow_msr(tty0tty->tty->index, msr);
 
 	return 0;
 }
@@ -609,37 +609,11 @@ static int tty0tty_ioctl_tiocgserial(struct tty_struct *tty,
 static int tty0tty_ioctl_tiocsserial(struct tty_struct *tty,
 			unsigned long arg)
 {
-/*
-	struct tty0tty_serial *tty0tty = tty->driver_data;
-	struct serial_struct tmp;
-
 #ifdef SCULL_DEBUG
-	printk(KERN_DEBUG "%s - tnt%i\n", __FUNCTION__, tty->index);
+	printk(KERN_DEBUG "%s - tnt%i \n", __FUNCTION__, tty->index);
 #endif
-
-	if (!arg)
-		return -EFAULT;
-
-	memset(&tmp, 0, sizeof(tmp));
-
-	tmp.type		= tty0tty->serial.type;
-	tmp.line		= tty0tty->serial.line;
-	tmp.port		= tty0tty->serial.port;
-	tmp.irq			= tty0tty->serial.irq;
-	tmp.flags		= ASYNC_SKIP_TEST | ASYNC_AUTO_IRQ;
-	tmp.xmit_fifo_size	= tty0tty->serial.xmit_fifo_size;
-	tmp.baud_base		= tty0tty->serial.baud_base;
-	tmp.close_delay		= 5*HZ;
-	tmp.closing_wait	= 30*HZ;
-	tmp.custom_divisor	= tty0tty->serial.custom_divisor;
-	tmp.hub6		= tty0tty->serial.hub6;
-	tmp.io_type		= tty0tty->serial.io_type;
-
-	if (copy_to_user((void __user *)arg, &tmp, sizeof(struct serial_struct)))
-		return -EFAULT;
-	return 0;
-*/
-	return -EFAULT;//TODO
+	
+	return -ENOIOCTLCMD; //TODO
 }
 
 static int tty0tty_ioctl_tiocmiwait(struct tty_struct *tty,
@@ -852,6 +826,41 @@ static int tty0tty_break_ctl(struct tty_struct *tty, int state){
 	return 0;
 }
 
+static int tty0tty_get_serial(struct tty_struct *tty, struct serial_struct *ss){
+#ifdef SCULL_DEBUG
+	printk(KERN_DEBUG "%s - tnt%i \n", __FUNCTION__, tty->index);
+#endif
+	
+	struct tty0tty_serial *tty0tty = tty->driver_data;
+
+	if (ss == NULL)
+		return -EFAULT;
+	
+	memset(ss, 0, sizeof(struct serial_struct));
+
+	ss->type		= tty0tty->serial.type;
+	ss->line		= tty0tty->serial.line;
+	ss->port		= tty0tty->serial.port;
+	ss->irq			= tty0tty->serial.irq;
+	ss->flags		= ASYNC_SKIP_TEST | ASYNC_AUTO_IRQ;
+	ss->xmit_fifo_size	= tty0tty->serial.xmit_fifo_size;
+	ss->baud_base		= tty0tty->serial.baud_base;
+	ss->close_delay		= 5*HZ;
+	ss->closing_wait	= 30*HZ;
+	ss->custom_divisor	= tty0tty->serial.custom_divisor;
+	ss->hub6		= tty0tty->serial.hub6;
+	ss->io_type		= tty0tty->serial.io_type;
+
+	return 0;
+}
+
+static int tty0tty_set_serial(struct tty_struct *tty, struct serial_struct *ss){
+#ifdef SCULL_DEBUG
+	printk(KERN_DEBUG "%s - tnt%i \n", __FUNCTION__, tty->index);
+#endif
+  return -ENOIOCTLCMD; //TODO
+}
+
 
 static struct tty_operations serial_ops = {
 	.open = tty0tty_open,
@@ -863,6 +872,8 @@ static struct tty_operations serial_ops = {
 	.tiocmset = tty0tty_tiocmset,
 	.ioctl = tty0tty_ioctl,
 	.break_ctl = tty0tty_break_ctl,
+	.get_serial = tty0tty_get_serial,
+	.set_serial = tty0tty_set_serial,
 };
 
 
@@ -956,7 +967,7 @@ static void __exit tty0tty_exit(void)
 		if (tty0tty) {
 			/* close the port */
 			while (tty0tty->open_count)
-				do_close(tty0tty);
+				tty0tty_do_close(tty0tty);
 
 			/* shut down our timer and free the memory */
 			kfree(tty0tty);
