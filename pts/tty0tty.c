@@ -32,7 +32,11 @@
 #include <sys/select.h>
 #include <errno.h>
 
+#if defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 42))
+#include <termios.h>
+#else
 #include <termio.h>
+#endif
 
 static char buffer[1024];
 
